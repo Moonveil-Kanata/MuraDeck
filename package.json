@@ -1,7 +1,7 @@
 {
-  "name": "decky-plugin-template",
-  "version": "0.0.1",
-  "description": "A template to quickly create decky plugins from scratch, based on TypeScript and webpack",
+  "name": "MuraDeck",
+  "version": "1.0.0",
+  "description": "Add mura correction, dithering, and gamma fix to Samsung Panel on Steam Deck OLED.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
@@ -10,24 +10,31 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SteamDeckHomebrew/decky-plugin-template.git"
+    "url": "git+"
   },
   "keywords": [
     "decky",
     "plugin",
-    "plugin-template",
     "steam-deck",
-    "deck"
+    "deck",
+    "mura",
+    "mura-fix",
+    "mura-correction",
+    "mura-deck",
+    "muradeck",
+    "oled",
+    "samsung"
   ],
-  "author": "You <you@you.tld>",
+  "author": "MoonVeil Kanata ~ Renvy R",
   "license": "BSD-3-Clause",
   "bugs": {
-    "url": "https://github.com/SteamDeckHomebrew/decky-plugin-template/issues"
+    "url": ""
   },
-  "homepage": "https://github.com/SteamDeckHomebrew/decky-plugin-template#readme",
+  "homepage": "",
   "devDependencies": {
     "@decky/rollup": "^1.0.1",
-    "@decky/ui": "^4.7.2",
+    "@decky/ui": "^4.10.1",
+    "@rollup/plugin-replace": "^6.0.2",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "@types/webpack": "^5.28.5",
@@ -36,6 +43,7 @@
   },
   "dependencies": {
     "@decky/api": "^1.1.2",
+    "decky-frontend-lib": "^3.25.0",
     "react-icons": "^5.3.0",
     "tslib": "^2.7.0"
   },

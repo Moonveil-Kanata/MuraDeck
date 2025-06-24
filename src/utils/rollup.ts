@@ -1,0 +1,3 @@
+export const PLUGIN_NAME = "PLUGIN_NAME";
+export const PLUGIN_VERSION = "PLUGIN_VERSION";
+export const PLUGIN_AUTHOR = "PLUGIN_AUTHOR";

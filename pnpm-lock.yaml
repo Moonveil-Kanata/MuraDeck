@@ -11,6 +11,9 @@ importers:
       '@decky/api':
         specifier: ^1.1.2
         version: 1.1.2
+      decky-frontend-lib:
+        specifier: ^3.25.0
+        version: 3.25.0
       react-icons:
         specifier: ^5.3.0
         version: 5.3.0(react@18.3.1)
@@ -22,8 +25,11 @@ importers:
         specifier: ^1.0.1
         version: 1.0.1
       '@decky/ui':
-        specifier: ^4.7.2
-        version: 4.7.2
+        specifier: ^4.10.1
+        version: 4.10.1
+      '@rollup/plugin-replace':
+        specifier: ^6.0.2
+        version: 6.0.2(rollup@4.22.5)
       '@types/react':
         specifier: 18.3.3
         version: 18.3.3
@@ -48,8 +54,8 @@ packages:
   '@decky/rollup@1.0.1':
     resolution: {integrity: sha512-dx1VJwD7ul14PA/aZvOwAfY/GujHzqZJ+MFb4OIUVi63/z4KWMSuZrK6QWo0S4LrNW3RzB3ua6LT0WcJaNY9gw==}
 
-  '@decky/ui@4.7.2':
-    resolution: {integrity: sha512-jYXVhbyyupXAcCuFqr7G2qjYVjp8hlMGF8zl8ALv67y0YhikAtfhA2rGUjCuaV3kdo9YrpBh8djRUJXdFPg/Eg==}
+  '@decky/ui@4.10.1':
+    resolution: {integrity: sha512-8rTqVjjXOGJw2oa5BrT1pFY9X8DVAc3E89d4ya93kq5ixK8zQF4FKxnFPYiJ/7w354mVZGdgpx1L5RmZ3Q7e+g==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -121,6 +127,15 @@ packages:
 
   '@rollup/plugin-replace@5.0.7':
     resolution: {integrity: sha512-PqxSfuorkHz/SPpyngLyg5GCEkOcee9M1bkxiVDr41Pd61mqP1PLOoDPbpl44SB2mQGKwV/In74gqQmGITOhEQ==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
+  '@rollup/plugin-replace@6.0.2':
+    resolution: {integrity: sha512-7QaYCf8bqF04dOy7w/eHmJeNExxTYwvKAmlSAH/EaWWUzbT0h5sbF6bktFoX/0F/0qwng5/dWFMyf3gzaM8DsQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
@@ -407,6 +422,9 @@ packages:
 
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
+
+  decky-frontend-lib@3.25.0:
+    resolution: {integrity: sha512-2lBoHS2AIRmuluq/bGdHBz+uyToQE7k3K/vDq1MQbDZ4eC+8CGDuh2T8yZOj3D0yjGP2MdikNNAWPA9Z5l2qDg==}
 
   deepmerge@4.3.1:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
@@ -920,7 +938,7 @@ snapshots:
       tslib: 2.7.0
       typescript: 5.6.2
 
-  '@decky/ui@4.7.2': {}
+  '@decky/ui@4.10.1': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -996,6 +1014,13 @@ snapshots:
       rollup: 4.22.5
 
   '@rollup/plugin-replace@5.0.7(rollup@4.22.5)':
+    dependencies:
+      '@rollup/pluginutils': 5.1.2(rollup@4.22.5)
+      magic-string: 0.30.11
+    optionalDependencies:
+      rollup: 4.22.5
+
+  '@rollup/plugin-replace@6.0.2(rollup@4.22.5)':
     dependencies:
       '@rollup/pluginutils': 5.1.2(rollup@4.22.5)
       magic-string: 0.30.11
@@ -1269,6 +1294,8 @@ snapshots:
       which: 2.0.2
 
   csstype@3.1.3: {}
+
+  decky-frontend-lib@3.25.0: {}
 
   deepmerge@4.3.1: {}
 
