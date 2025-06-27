@@ -1,7 +1,7 @@
 import { IconType } from "react-icons";
 import { FaTabletAlt, FaFirstdraft, FaFlipboard, FaInfoCircle, FaBarcode, FaCuttlefish } from "react-icons/fa";
 
-export type EffectKey = 'mura' | 'monitor' | 'brightness' | 'grain' | 'lgg' | 'loading';
+export type EffectKey = 'mura' | 'monitor' | 'brightness' | 'grain' | 'lgg' | 'aspectfix' | 'loading';
 
 export interface EffectMeta {
   title: string;
@@ -33,6 +33,11 @@ export const Desc: Record<EffectKey, EffectMeta> = {
   lgg: {
     title: "Gamma Correction",
     desc: "Fix Samsung panel raised gamma by reducing lift and gamma only on dark areas. Disable it if you find it's too dark",
+    icon: FaFlipboard,
+  },
+  aspectfix: {
+    title: "Aspect ratio fix",
+    desc: "By default mura map will be designed to be works with 16:xx ratio. Enabling this will adapt game ratios, for example 1:1 games",
     icon: FaFlipboard,
   },
   loading: {

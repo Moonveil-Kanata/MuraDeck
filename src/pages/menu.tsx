@@ -1,7 +1,7 @@
 import { SidebarNavigation } from "@decky/ui";
 import { FaInfoCircle, FaListAlt } from "react-icons/fa";
 import { StatusTab } from "./status";
-import { InfoTab } from "./welcome";
+import { InfoTab } from "./init";
 
 export function Menu() {
   return (
@@ -14,9 +14,9 @@ export function Menu() {
       <SidebarNavigation
         pages={[
           {
-            title: "Welcome",
+            title: "Initialization",
             icon: <FaListAlt />,
-            route: "/mura-deck/menu/welcome",
+            route: "/mura-deck/menu/initialization",
             content: <InfoTab />,
           },
           {

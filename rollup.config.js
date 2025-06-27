@@ -9,9 +9,9 @@ export default deckyPlugin({
     replace({
       preventAssignment: true,
       values: {
-        "PLUGIN_NAME": name,
-        "PLUGIN_VERSION": version,
-        "PLUGIN_AUTHOR": typeof author === "object" ? author.name : author,
+        "__PLUGIN_NAME__": name,
+        "__PLUGIN_VERSION__": version,
+        "__PLUGIN_AUTHOR__": typeof author === "object" ? author.name : author,
       },
     }),
   ],

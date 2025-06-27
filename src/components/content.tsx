@@ -97,7 +97,6 @@ export function Content() {
             <ToggleField
               disabled={!welcomePassed || shaderReady === false || isTogglingEnabled}
               label={Desc.mura.title}
-              description={isTogglingEnabled ? Desc.loading.title : ""}
               checked={enabled}
               onChange={val =>
                 delayToggle("toggle_enabled", val, setEnabled, setIsTogglingEnabled)
@@ -157,7 +156,7 @@ export function Content() {
             <ToggleField
               disabled={!welcomePassed || shaderReady === false || isTogglingGrain}
               label={Desc.grain.title}
-              description={isTogglingGrain ? Desc.loading.title : ""}
+              description={isTogglingGrain ? "Saving to "+displayMode+"..." : ""}
               checked={grain}
               onChange={val =>
                 delayToggle("toggle_grain", val, setGrain, setIsTogglingGrain)
@@ -172,7 +171,7 @@ export function Content() {
             <ToggleField
               disabled={!welcomePassed || shaderReady === false || isTogglingLGG}
               label={Desc.lgg.title}
-              description={isTogglingLGG ? Desc.loading.title : ""}
+              description={isTogglingLGG ? "Saving to "+displayMode+"..." : ""}
               checked={lgg}
               onChange={val =>
                 delayToggle("toggle_lgg", val, setLGG, setIsTogglingLGG)

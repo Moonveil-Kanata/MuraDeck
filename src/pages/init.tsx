@@ -3,18 +3,24 @@ import {
   Navigation,
   SideMenu
 } from "@decky/ui";
-
+import { FaExclamationCircle } from "react-icons/fa";
 import { ParallelPanelSection } from "../components/styles/parallelPanelSec";
 
 export function InfoTab() {
   return (
     <>
       <ParallelPanelSection title= "Welcome to Mura Deck">
-        <div>
-          Make sure, you're on <b>SteamOS 3.7.8</b> or above for better reshade performance.
+        <div style={{ display: "flex", gap: "8px"}}>
+          <FaExclamationCircle style={{paddingTop: "4px"}}/>
+          <span>
+            Make sure you're on <b>SteamOS 3.7.8</b> or above for better ReShade performance.
+          </span>
         </div>
-        <div>
-          And, <b>disable mura compensation</b> before using this plugin.
+        <div style={{ display: "flex", gap: "8px"}}>
+          <FaExclamationCircle style={{paddingTop: "4px"}}/>
+          <span>
+            And, <b>disable mura compensation</b> before using this plugin.
+          </span>
         </div>
       </ParallelPanelSection>
       <ParallelPanelSection title="Initialization">
