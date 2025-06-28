@@ -40,12 +40,13 @@ __pycache__/
 /.yalc
 yalc.lock
 
-.vscode/
 .vscode/settings.json
 
 # Ignore output folder
 
 backend/out
+
+py_modules
 
 # Make sure to ignore any instance of the loader's decky_plugin.py
 decky_plugin.py
