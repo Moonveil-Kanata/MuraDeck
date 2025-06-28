@@ -4,6 +4,7 @@
 
 ## 🔵 Functionality
 Install it and forget it. Everything created, to automagically doing everything in the background for you:
+- Extracting your mura map and the shaders, will starts automatically during installation process
 - Mura correction, only on your bright pixel. To preserve pure black
 - Automatically shader switching, between SDR/HDR profile (HDR PQ, HDR scRGB, and SDR)
 - Brightness adaptation, designed to adapt the mura map strength with the current brightness
@@ -23,7 +24,7 @@ https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 ## 🔴 Known Limitations
 Shaders are designed to work with landscape 16:xx aspect ratio. Other than 16:xx ratios will causing mura looks worse, since it's designed to stretch to horizontal.
 
-During development, it was tested using `xwininfo` to get current window resolution. The difficulty starts, when trying to achieve the timing to trigger the ``xwininfo``. If some of you able to tackle this limitation, feel free to contribute to the project.
+During development, it was tested using `xwininfo` to get current window resolution. The difficulty starts, when trying to achieve the timing to trigger the ``xwininfo``. If some of you able to tackle this limitation, feel free to contribute to thish project.
 
 ## 🟡 TL;DR
 Average Samsung-panel on Steam Deck have known-issues called Mura Effect and raised gamma, where it has bad gray-uniformity on certain Hz and brightness. Resulting, grainy/dirty looks on the screen which can consider looks like a noise or film grain. Causing gradient effects on near-black looks like banding when fading into black. **While the current fix provided from valve unfortunately is raising the black level with the mura map keep showing on the black pixel.**
