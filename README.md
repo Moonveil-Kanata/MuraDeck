@@ -1,12 +1,12 @@
 # MuraDeck
 
->MuraDeck is originally developed to automagically switching between vkBasalt and Gamescope to fix your mura issue. Since SteamOS 3.7.8 the development scope is switching into full Gamescope reshade, since the reshade is gain a performance update.
+>MuraDeck is originally developed to automagically switching between vkBasalt and Gamescope to fix your mura issue with better performance. Since SteamOS 3.7.8 the development scope is switching into full Gamescope reshade, since the reshade is gaining a performance update.
 
 ![MuraDeck](./assets/IMG_7395.JPG)
 
 ## 🔵 Functionality
-Install it and forget it. Everything created, to automagically doing everything in the background for you:
-- Extracting your mura map and the shaders, will starts automatically during installation process
+Install it and forget it. Everything is created, to automagically doing everything in the background for you:
+- Your mura map and the shaders, will extracted automatically during installation process
 - Mura correction, only on your bright pixel. To preserve pure black
 - Automatically shader switching, between SDR/HDR profile (HDR PQ, HDR scRGB, and SDR)
 - Brightness adaptation, designed to adapt the mura map strength with the current brightness
