@@ -124,6 +124,9 @@ class Plugin:
         self._enabled = enable
 
         if enable:
+            self.last_map_scale = None
+            self.last_fade_near = None
+
             if self._watch_task is None or self._watch_task.done():
                 self._watch_task = asyncio.create_task(self._log_watcher())
             await self._apply_current_profile()
