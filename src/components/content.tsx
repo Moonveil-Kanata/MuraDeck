@@ -45,7 +45,7 @@ export function Content() {
         setBrightnessEnabled(bright);
         setWelcomePassed(seen);
       } catch (e) {
-        console.error("Gagal fetch status umum:", e);
+        console.error("Failed to fetch:", e);
       }
 
       try {
@@ -56,14 +56,14 @@ export function Content() {
           setLGG(l);
         }
       } catch (e) {
-        console.error("Gagal fetch grain/lgg:", e);
+        console.error("Failed to fetch grain/lgg:", e);
       }
 
       try {
         const ok = await call<[], boolean>("check_shader_status");
         setShaderReady(ok);
       } catch (e) {
-        console.error("Gagal cek shader status:", e);
+        console.error("Failed to check shader status:", e);
         setShaderReady(false);
       }
     };
