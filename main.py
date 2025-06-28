@@ -86,7 +86,6 @@ class Plugin:
         self.last_map_scale: float | None = None
         self.last_fade_near: float | None = None
 
-        self._brightness_enabled = settings.getSetting("brightness_enabled", True)
         self.current_brightness: int | None = None
 
         self._enabled = settings.getSetting("enabled", False)
@@ -97,7 +96,6 @@ class Plugin:
         )
         self._monitor_watch_task = None
 
-        # Config
         self._grain_enabled_sdr = settings.getSetting("grain_enabled_sdr", True)
         self._lgg_enabled_sdr = settings.getSetting("lgg_enabled_sdr", True)
         self._grain_enabled_hdr = settings.getSetting("grain_enabled_hdr", True)
@@ -106,11 +104,14 @@ class Plugin:
         self._grain_enabled = self._grain_enabled_sdr
         self._lgg_enabled = self._lgg_enabled_sdr
 
+        self._brightness_enabled = settings.getSetting("brightness_enabled", True)
 
     async def _main(self):
         decky.logger.info("[MuraDeck] Started")
         if self._monitor_watch_enabled:
-            self._monitor_watch_task = asyncio.create_task(self._ext_monitor_watcher())
+            self._monitor_watch_task = asyncio.create_task(
+                self._ext_monitor_watcher()
+            )
         if self._enabled:
             self._watch_task = asyncio.create_task(self._log_watcher())
 
@@ -123,12 +124,10 @@ class Plugin:
         self._enabled = enable
 
         if enable:
-            # Run log watcher & apply fx
             if self._watch_task is None or self._watch_task.done():
                 self._watch_task = asyncio.create_task(self._log_watcher())
             await self._apply_current_profile()
         else:
-            # Disable log watcher & disable fx
             if self._watch_task and not self._watch_task.done():
                 self._watch_task.cancel()
                 try:
@@ -166,14 +165,10 @@ class Plugin:
             return
         if not self._brightness_enabled:
             decky.logger.info("[MuraDeck] [Brightness=OFF]")
-            # If "Brightness Adaptation" off, use static value
             await self._apply_static()
             return
 
-        # Brightness Adaptation
         decky.logger.info(f"[MuraDeck] [Brightness] {brightness}% (Profile={self.profile})")
-
-        # HDR10PQ
         if self.profile == "HDR10PQ":
             for thr, map_s, fade_n in BRIGHTNESS_TABLE_HDR10PQ:
                 if brightness > thr:
@@ -191,8 +186,6 @@ class Plugin:
                         self.last_map_scale = map_s
                         self.last_fade_near = fade_n
                     break
-
-        # HDR scRGB
         elif self.profile == "HDRscRGB":
             for thr, map_s in BRIGHTNESS_TABLE_HDRscRGB:
                 if brightness > thr:
@@ -204,8 +197,6 @@ class Plugin:
                         await self._set_effect(FX_HDRscRGB)
                         self.last_map_scale = map_s
                     break
-
-        # SDR
         else:
             for thr, map_s in BRIGHTNESS_TABLE_SDR:
                 if brightness > thr:
@@ -216,7 +207,6 @@ class Plugin:
                         self.last_map_scale = map_s
                     break
 
-    # To toggle brightness adaptation
     async def toggle_brightness(self, enable: bool):
         settings.setSetting("brightness_enabled", enable)
         settings.commit()
@@ -232,7 +222,6 @@ class Plugin:
     async def get_brightness_enabled(self) -> bool:
         return self._brightness_enabled
 
-    # HDR/SDR Watcher
     async def _log_watcher(self):
         for p in (LOG_LINUX, LOG_GAMEPROC):
             if not os.path.exists(p):
@@ -286,7 +275,6 @@ class Plugin:
                 self.current_appid = None
                 continue
 
-    # External monitor watcher
     async def _ext_monitor_watcher(self):
         if not os.path.exists(LOG_DISPLAYMGR):
             decky.logger.warn(
@@ -351,14 +339,16 @@ class Plugin:
 
         decky.logger.info(f"[MuraDeck] Profile → {profile}, effect={self.current_effect}")
 
-        # Reapply fx
-        if self.current_brightness is not None or not self._brightness_enabled:
+        if not self._brightness_enabled:
+            await self._apply_static()
+        elif self.current_brightness is not None:
+            await self.brightness_state(self.current_brightness)
+        else:
             await self._apply_effect(self.current_effect)
 
     async def _apply_current_profile(self):
         await self._set_profile(self.profile)
 
-    # Static config value
     async def _apply_static(self):
         if self.profile == "HDR10PQ":
             map_s, fade_n = STATIC_HDR10PQ
@@ -422,7 +412,7 @@ class Plugin:
         if is_hdrscrgb:
             grain_value = 1.0 if self._grain_enabled else 0.0
             lgg_lift_value = 0.9999 if self._lgg_enabled else 1.0
-            lgg_gamma_value = 1.0
+            lgg_gamma_value = 1.0  # sesuai default
         elif is_sdr:
             grain_value = 0.01 if self._grain_enabled else 0.0
             lgg_lift_value = 0.95 if self._lgg_enabled else 1.0
@@ -520,7 +510,6 @@ class Plugin:
         with open(path, "w") as f:
             f.writelines(out)
 
-        # create temp fx
         temp_path = path.replace(".fx", "_temp.fx")
         try:
             shutil.copy(path, temp_path)
@@ -627,7 +616,7 @@ class Plugin:
         settings.commit()
         decky.logger.info("[MuraDeck] Reset welcome flag on uninstall")
 
-        # Clean up all shaders + temp
+        # Remove shaders
         all_shaders = MURA_SHADER_FILES + [
             "MuraDeck_SDR_temp.fx",
             "MuraDeck_HDR10PQ_temp.fx",
@@ -642,7 +631,7 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Delete shader {fn} error: {e}")
 
-        # Clean up textures
+        # Remove textures
         for fn in MURA_TEXTURE_FILES:
             try:
                 os.remove(os.path.join(TEXTURE_DIR, fn))
@@ -705,6 +694,7 @@ class Plugin:
                 except Exception as e:
                     decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
 
+            # copy textures from tmp & config
             try:
                 green_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*green.png"))
                 red_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*red.png"))

@@ -1,41 +1,21 @@
+/**
+ * MuraDeck
+ * by RenvyRere ~ Moonveil-Kanata
+ *
+ * Fix Mura Effect on OLED Panel, by Combining Lift Gamma Gain and Film Grain as dithering on dark pixel, while Mura map on the bright pixel.
+ */
+
 #include "ReShadeUI.fxh"
 
-// === Grain Settings ===
-uniform float Intensity < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.0; ui_max = 1.0;
-    ui_label = "Grain Intensity";
-    ui_tooltip = "How visible the grain is. Higher is more visible.";
-> = 0.01;
+// === Virtual Contrast for Luminance (HDR-only) ===
+uniform float PreContrast < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.5; ui_max = 4.0;
+    ui_label = "Pre-Contrast";
+    ui_tooltip = "Pre-contrast to normalize HDR color profile.";
+> = 1.01;
 
-uniform float Variance < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.0; ui_max = 1.0;
-    ui_tooltip = "Controls the variance of the Gaussian noise. Lower values look smoother.";
-> = 1.0;
 
-uniform float Mean < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.0; ui_max = 1.0;
-    ui_tooltip = "Affects the brightness of the noise.";
-> = 0.5;
-
-uniform int GrainSignalToNoiseRatio < __UNIFORM_SLIDER_INT1
-    ui_min = 0; ui_max = 100;
-    ui_label = "Grain Signal-to-Noise Ratio";
-    ui_tooltip = "Higher values give less grain to brighter pixels. 0 disables this feature.";
-> = 90;
-
-uniform int LggSignalToNoiseRatio < __UNIFORM_SLIDER_INT1
-    ui_min = 0; ui_max = 100;
-    ui_label = "LGG Signal-to-Noise Ratio";
-    ui_tooltip = "Controls how LGG fades based on brightness. 0 disables it.";
-> = 90;
-
-uniform float GrainFadeNearBlack < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.1; ui_max = 8.0;
-    ui_label = "Grain Fade Near Black";
-    ui_tooltip = "Controls how fast grain fades to zero near black. Higher = Faster fade.";
-> = 0.175;
-
-// === Lift Gamma Gain Settings ===
+// Lift Gamma Gain
 uniform float3 RGB_Lift < __UNIFORM_SLIDER_FLOAT3
     ui_min = 0.0; ui_max = 2.0;
     ui_label = "RGB Lift";
@@ -54,25 +34,55 @@ uniform float3 RGB_Gain < __UNIFORM_SLIDER_FLOAT3
     ui_tooltip = "Adjust highlights.";
 > = 1.0;
 
-// === Virtual Contrast for Luminance (HDR-only) ===
-uniform float LumaContrastBoost < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.5; ui_max = 4.0;
-    ui_label = "Virtual Luma Contrast";
-    ui_tooltip = "Boost contrast only for luminance detection, to help grain/LGG in HDR.";
-> = 1.01;
+uniform int LggFadeNearBright < __UNIFORM_SLIDER_INT1
+    ui_min = 0; ui_max = 100;
+    ui_label = "LGG Fade Near Bright";
+    ui_tooltip = "Higher values give less LGG to brighter pixels. Higher = Faster fade.";
+> = 90;
 
-// === Mura Fix Settings ===
-uniform float MuraFadeNearBlack < __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.0; ui_max = 20.0;
-    ui_label = "Mura Fade Near Black";
-    ui_tooltip = "Controls how fast mura fix fades out to pure black. Higher = Faster fade.";
-> = 0.0;
 
+// Grain
+uniform float Intensity < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 1.0;
+    ui_label = "Grain Intensity";
+    ui_tooltip = "How visible the grain is. Higher is more visible.";
+> = 0.01;
+
+uniform float Variance < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 1.0;
+    ui_tooltip = "Controls the variance of the Gaussian noise. Lower values look smoother.";
+> = 1.0;
+
+uniform float Mean < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 1.0;
+    ui_tooltip = "Affects the brightness of the noise.";
+> = 0.5;
+
+uniform int GrainFadeNearBright < __UNIFORM_SLIDER_INT1
+    ui_min = 0; ui_max = 100;
+    ui_label = "Grain Fade Near Bright";
+    ui_tooltip = "Higher values give less grain to brighter pixels. Higher = Faster fade.";
+> = 90;
+
+uniform float GrainFadeNearBlack < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.1; ui_max = 8.0;
+    ui_label = "Grain Fade Near Black";
+    ui_tooltip = "Higher values give less grain to dark pixels. Higher = Faster fade.";
+> = 0.175;
+
+
+// Mura
 uniform float MuraFadeNearWhite < __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.1; ui_max = 20.0;
     ui_label = "Mura Fade Near White";
-    ui_tooltip = "Controls how fast mura fix fades out to bright pixel. Higher = Faster fade.";
+    ui_tooltip = "Higher values give less mura to brighter pixels. Higher = Faster fade.";
 > = 4.75;
+
+uniform float MuraFadeNearBlack < __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 20.0;
+    ui_label = "Mura Fade Near Black";
+    ui_tooltip = "Higher values give less mura to dark pixels. Higher = Faster fade.";
+> = 0.0;
 
 uniform float MuraBlackCutoff < __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.0; ui_max = 0.1;
@@ -85,11 +95,6 @@ uniform float MuraMapScale < __UNIFORM_SLIDER_FLOAT1
     ui_label = "Mura Correction Strength";
     ui_tooltip = "Controls how aggressive mura map.";
 > = 0.3;
-
-uniform int Type <
-    ui_type = "combo";
-    ui_items = "Defring\0";
-> = 0;
 
 texture red_tex < source = "red.png"; > { Width = 1280; Height = 800; Format = RGBA8; };
 texture green_tex < source = "green.png"; > { Width = 1280; Height = 800; Format = RGBA8; };
@@ -105,17 +110,17 @@ float3 MuraDeck(float4 vpos : SV_Position, float2 texcoord : TexCoord) : SV_Targ
 {
     float3 color = tex2D(ReShade::BackBuffer, texcoord).rgb;
 
-    // === CONTRASTED FOR LUMA (HDR-only) ===
-    float3 contrasted = saturate((color - 0.5) * LumaContrastBoost + 0.5);
+    // PRE-CONTRAST
+    float3 contrasted = saturate((color - 0.5) * PreContrast + 0.5);
     float luma = dot(contrasted, float3(0.2126, 0.7152, 0.0722));
 
     if (luma <= 0.0001)
         return color;
 
-    // === GRAIN ===
+    // GRAIN
     {
         float inv_luma = dot(contrasted, float3(-1.0 / 3.0, -1.0 / 3.0, -1.0 / 3.0)) + 1.0;
-        float stn = GrainSignalToNoiseRatio != 0 ? pow(abs(inv_luma), (float)GrainSignalToNoiseRatio) : 1.0;
+        float stn = GrainFadeNearBright != 0 ? pow(abs(inv_luma), (float)GrainFadeNearBright) : 1.0;
         float variance = (Variance * Variance) * stn;
         float mean = Mean;
 
@@ -140,20 +145,20 @@ float3 MuraDeck(float4 vpos : SV_Position, float2 texcoord : TexCoord) : SV_Targ
         color = saturate(color);
     }
 
-    // === LIFT GAMMA GAIN ===
+    // LIFT GAMMA GAIN
     float3 color_LGG = color * (1.5 - 0.5 * RGB_Lift) + 0.5 * RGB_Lift - 0.5;
     color_LGG = saturate(color_LGG);
     color_LGG *= RGB_Gain;
     color_LGG = pow(abs(color_LGG), 1.0 / RGB_Gamma);
     color_LGG = saturate(color_LGG);
 
-    float fade_lgg = LggSignalToNoiseRatio != 0 ? pow(1.0 - luma, (float)LggSignalToNoiseRatio) : 1.0;
+    float fade_lgg = LggFadeNearBright != 0 ? pow(1.0 - luma, (float)LggFadeNearBright) : 1.0;
     color = lerp(color, color_LGG, fade_lgg);
 
-    // === MURA CORRECTION ===
+    // MURA CORRECTION
     if (luma > MuraBlackCutoff)
     {
-        const float target_aspect = 1280.0 / 800.0; // = 16/10
+        const float target_aspect = 1280.0 / 800.0;
         float screen_aspect = ReShade::ScreenSize.x / ReShade::ScreenSize.y;
         float2 mura_uv = texcoord;
 

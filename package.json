@@ -26,11 +26,11 @@
     "samsung"
   ],
   "author": "MoonVeil Kanata ~ Renvy R",
-  "license": "BSD-3-Clause",
+  "license": "GPL-3.0",
   "bugs": {
-    "url": ""
+    "url": "https://github.com/Moonveil-Kanata/MuraCorrection-Deck/issues"
   },
-  "homepage": "",
+  "homepage": "https://github.com/Moonveil-Kanata/MuraCorrection-Deck#readme",
   "devDependencies": {
     "@decky/rollup": "^1.0.1",
     "@decky/ui": "^4.10.1",
