@@ -7,7 +7,7 @@
 
 #include "ReShadeUI.fxh"
 
-// === Virtual Contrast for Luminance (HDR-only) ===
+// Pre-Contrast
 uniform float PreContrast < __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.5; ui_max = 4.0;
     ui_label = "Pre-Contrast";
