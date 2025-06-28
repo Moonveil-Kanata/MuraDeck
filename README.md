@@ -2,7 +2,7 @@
 
 ![MuraDeck](./assets/IMG_7395.JPG)
 
-## 🟢 Functionality
+## 🔵 Functionality
 Install it and forget it. Everything created, to automagically doing everything in the background for you:
 - Mura correction, only on your bright pixel. To preserve pure black
 - Automatically shader switching, between SDR/HDR profile (HDR PQ, HDR scRGB, and SDR)
@@ -15,7 +15,7 @@ Install it and forget it. Everything created, to automagically doing everything 
 
 Feel free to report a bug, if some of these core functionality not working.
 
-## 🟫🟨🟧 Ground Truth
+## 🟫 Ground Truth
 https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 
 ![MuraDeck](./assets/Ground%20Truth.png)
