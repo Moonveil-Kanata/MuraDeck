@@ -1,7 +1,5 @@
 # MuraDeck
 
-MuraDeck is originally developed to automagically switching between vkBasalt and Gamescope to fix your mura issue. Since SteamOS 3.7.8 the development scope is switching into full Gamescope reshade, since the reshade is gain a performance update.
-
 ![MuraDeck](./assets/IMG_7395.JPG)
 
 ## 🔵 Functionality
@@ -34,6 +32,8 @@ Average Samsung-panel on Steam Deck have known-issues called Mura Effect and rai
 In a nutshell, **you can fix it by set your screen hertz between 47hz-66hz and set your brightness between 35/40%, and disable mura compensation on developer settings**. And you will get the screen where it should be, perfect black and nice gradient on near-black. **But this is not apply with higher brightness.**
 
 This fix will use combination between **film grain for dithering, lift & gamma (only on near-black pixel)** and your **mura map (only on your bright pixel)**. While **this is not perfect**, atleast it will fix half of the screen issue.
+
+MuraDeck is originally developed to automagically switching between vkBasalt and Gamescope to fix your mura issue. Since SteamOS 3.7.8 the development scope is switching into full Gamescope reshade, since the reshade is gain a performance update.
 
 ## Credits
 Shaders & plugin is developed by MoonVeil Kanata ~ RenvyRere.
