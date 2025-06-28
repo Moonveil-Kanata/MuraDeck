@@ -11,6 +11,7 @@ Since the plugin is still in the testing environments. You need to install it ma
 
 ## Ground Truth
 https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
+
 ![MuraDeck](./assets/Ground%20Truth.png)
 
 ## Features
