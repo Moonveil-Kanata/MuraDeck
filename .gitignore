@@ -20,6 +20,7 @@ coverage
 .env
 
 # Dependency directory
+py_modules
 node_modules
 bower_components
 .pnpm-store
@@ -40,13 +41,13 @@ __pycache__/
 /.yalc
 yalc.lock
 
+.vscode
 .vscode/settings.json
 
 # Ignore output folder
 
+backend
 backend/out
-
-py_modules
 
 # Make sure to ignore any instance of the loader's decky_plugin.py
 decky_plugin.py
