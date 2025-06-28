@@ -20,23 +20,21 @@ uniform float GlobalPreContrast <
     ui_min = 0.5; ui_max = 4.0;
     ui_label = "Global Pre-Contrast";
     ui_tooltip = "Pre-contrast to normalize HDR color profile.";
-> = 0.9998;
+> = 0.9982;
 
 
-// Lift Gamma Gain Settings
-uniform float3 RGB_Lift <
-    __UNIFORM_SLIDER_FLOAT3
-    ui_min = 0.0; ui_max = 2.0;
-    ui_label = "RGB Lift";
-    ui_tooltip = "Adjust shadows.";
-> = 0.9999;
+// Lift Gamma Gain
+uniform float3 RGB_Lift < __UNIFORM_SLIDER_FLOAT3
+	ui_min = 0.0; ui_max = 2.0;
+	ui_label = "RGB Lift";
+	ui_tooltip = "Adjust shadows.";
+> = 0.99995;
 
-uniform float3 RGB_Gamma <
-    __UNIFORM_SLIDER_FLOAT3
-    ui_min = 0.0; ui_max = 2.0;
-    ui_label = "RGB Gamma";
-    ui_tooltip = "Adjust midtones.";
-> = 0.99;
+uniform float3 RGB_Gamma < __UNIFORM_SLIDER_FLOAT3
+	ui_min = 0.1; ui_max = 3.0;
+	ui_label = "RGB Gamma";
+	ui_tooltip = "Adjust midtones.";
+> = 1.0;
 
 uniform float3 RGB_Gain <
     __UNIFORM_SLIDER_FLOAT3
@@ -47,18 +45,17 @@ uniform float3 RGB_Gain <
 
 
 // Grain
-uniform float Intensity <
-    __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.0; ui_max = 1.0;
-    ui_label = "Grain Intensity";
-    ui_tooltip = "How visible the grain is. Higher is more visible.";
-> = 1.0;
+uniform float Intensity < __UNIFORM_SLIDER_FLOAT1
+	ui_min = 0.0; ui_max = 1.0;
+	ui_label = "Grain Intensity";
+	ui_tooltip = "How visible the grain is.";
+> = 3.0;
 
 uniform float Variance <
     __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.0; ui_max = 1.0;
     ui_tooltip = "Controls the variance of the Gaussian noise. Lower values look smoother.";
-> = 0.9;
+> = 1.0;
 
 uniform float Mean <
     __UNIFORM_SLIDER_FLOAT1
@@ -78,7 +75,14 @@ uniform float GrainFadeNearBlack <
     ui_min = 0.1; ui_max = 8.0;
     ui_label = "Grain Fade Near Black";
     ui_tooltip = "Higher values give less grain to dark pixels. Higher = Faster fade.";
-> = 1;
+> = 1.5;
+
+uniform float GrainBlackCutoff <
+    __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 0.1;
+    ui_label = "Grain Black Cutoff";
+    ui_tooltip = "Grain will be disabled below this luminance level (absolute cutoff).";
+> = 0.00091;
 
 
 // Mura Correction
@@ -94,7 +98,7 @@ uniform float MuraFadeNearBlack <
     ui_min = 0.0; ui_max = 20.0;
     ui_label = "Mura Fade Near Black";
     ui_tooltip = "Higher values give less mura to dark pixels. Higher = Faster fade.";
-> = 0.05;
+> = 0.25;
 
 uniform float MuraBlackCutoff <
     __UNIFORM_SLIDER_FLOAT1
@@ -103,11 +107,10 @@ uniform float MuraBlackCutoff <
     ui_tooltip = "Below this luma level, Mura correction is completely disabled.";
 > = 0.001;
 
-uniform float MuraMapScale <
-    __UNIFORM_SLIDER_FLOAT1
-    ui_min = 0.0; ui_max = 5.0;
-    ui_label = "Mura Correction Strength";
-    ui_tooltip = "Controls how aggressive mura map.";
+uniform float MuraMapScale < __UNIFORM_SLIDER_FLOAT1
+	ui_min = 0.0; ui_max = 5;
+	ui_label = "Mura Correction Strength";
+	ui_tooltip = "Controls how aggressive mura map.";
 > = 0.0125;
 
 texture red_tex < source = "red.png"; > { Width = 1280; Height = 800; Format = RGBA8; };
@@ -132,6 +135,7 @@ float3 MuraDeck(float4 vpos : SV_Position, float2 texcoord : TexCoord) : SV_Targ
         return color;
 
     // GRAIN
+    if (luma > GrainBlackCutoff)
     {
         float inv_luma = dot(lum_contrasted, float3(-1.0 / 3.0, -1.0 / 3.0, -1.0 / 3.0)) + 1.0;
         float stn = GrainFadeNearBright != 0 ? pow(abs(inv_luma), (float)GrainFadeNearBright) : 1.0;

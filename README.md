@@ -19,6 +19,9 @@ Install it and forget it. Everything is created, to automagically doing everythi
 Feel free to report a bug, if some of these core functionality not working.
 
 ## 🟫 Ground Truth
+More test
+https://www.reddit.com/r/SteamDeck/comments/1lmemki/actual_mura_fix_plugin_for_your_steam_deck_oled/
+
 https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 
 ![MuraDeck](./assets/Ground%20Truth.png)

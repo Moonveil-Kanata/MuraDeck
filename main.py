@@ -46,7 +46,7 @@ FX_HDRscRGB = "MuraDeck_HDRscRGB.fx"
 
 STATIC_SDR = 0.0625
 STATIC_HDR10PQ = (0.125, 2.5)
-STATIC_HDRscRGB = 0.125
+STATIC_HDRscRGB = 0.0125
 
 BRIGHTNESS_TABLE_SDR = [
     (45, 0.0625),
@@ -71,8 +71,7 @@ BRIGHTNESS_TABLE_HDR10PQ = [
 ]
 
 BRIGHTNESS_TABLE_HDRscRGB = [
-    (45, 0.0125),
-    (40, 0.0625),
+    (40, 0.0125),
     (0,  0.065),
 ]
 
@@ -413,9 +412,9 @@ class Plugin:
         is_hdrscrgb = (fx_name == FX_HDRscRGB)
         
         if is_hdrscrgb:
-            grain_value = 1.0 if self._grain_enabled else 0.0
-            lgg_lift_value = 0.9999 if self._lgg_enabled else 1.0
-            lgg_gamma_value = 1.0  # sesuai default
+            grain_value = 3.0 if self._grain_enabled else 0.0
+            lgg_lift_value = 0.99995 if self._lgg_enabled else 1.0
+            lgg_gamma_value = 1.0
         elif is_sdr:
             grain_value = 0.01 if self._grain_enabled else 0.0
             lgg_lift_value = 0.95 if self._lgg_enabled else 1.0
@@ -652,6 +651,7 @@ class Plugin:
 
     async def _migration(self):
         decky.logger.info("[MuraDeck] Migration step")
+
         ena = settings.getSetting("enabled", None)
         if ena is None:
             decky.logger.info("[MuraDeck] First-time: disabling plugin")
@@ -664,79 +664,67 @@ class Plugin:
         os.makedirs(SHADER_DIR, exist_ok=True)
         os.makedirs(TEXTURE_DIR, exist_ok=True)
 
-        missing_shader = any(
-            not os.path.exists(os.path.join(SHADER_DIR, f))
-            for f in MURA_SHADER_FILES
-        )
-        missing_texture = any(
-            not os.path.exists(os.path.join(TEXTURE_DIR, f))
-            for f in MURA_TEXTURE_FILES
-        )
-
-        if missing_shader or missing_texture:
-            decky.logger.info(
-                "[MuraDeck] Shader/texture missing, extracting & installing..."
-            )
-            for cmd in ["galileo-mura-extractor", "galileo-mura-setup"]:
-                try:
-                    env = os.environ.copy()
-                    env["DISPLAY"] = ":0"
-                    proc = await asyncio.create_subprocess_exec(
-                        cmd,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        env=env,
-                    )
-                    out, err = await proc.communicate()
-                    if proc.returncode == 0:
-                        decky.logger.info(f"[MuraDeck] {cmd} OK")
-                    else:
-                        decky.logger.error(
-                            f"[MuraDeck] {cmd} FAILED: {err.decode()}"
-                        )
-                except Exception as e:
-                    decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
-
-            # copy textures from tmp & config
+        # Run shader extractor/setup always
+        decky.logger.info("[MuraDeck] Installing shaders (forced reinstall)...")
+        for cmd in ["galileo-mura-extractor", "galileo-mura-setup"]:
             try:
-                green_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*green.png"))
-                red_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*red.png"))
-                if green_tmp:
-                    shutil.copy(green_tmp[0], os.path.join(TEXTURE_DIR, "green.png"))
-                    decky.logger.info("[MuraDeck] Copied green.png")
-                if red_tmp:
-                    shutil.copy(red_tmp[0], os.path.join(TEXTURE_DIR, "red.png"))
-                    decky.logger.info("[MuraDeck] Copied red.png")
+                env = os.environ.copy()
+                env["DISPLAY"] = ":0"
+                proc = await asyncio.create_subprocess_exec(
+                    cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=env,
+                )
+                out, err = await proc.communicate()
+                if proc.returncode == 0:
+                    decky.logger.info(f"[MuraDeck] {cmd} OK")
+                else:
+                    decky.logger.error(f"[MuraDeck] {cmd} FAILED: {err.decode()}")
             except Exception as e:
-                decky.logger.error(f"[MuraDeck] Copy tmp textures error: {e}")
+                decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
 
-            # fallback ~/.config/gamescope/mura
+        # Install all shaders from plugin directory (forced)
+        for fn in MURA_SHADER_FILES:
+            src = os.path.join(PLUGIN_SHADERS_DIR, fn)
+            dst = os.path.join(SHADER_DIR, fn)
             try:
-                cfg_dir = os.path.expanduser("~/.config/gamescope/mura")
-                for cand in glob.glob(os.path.join(cfg_dir, "*")):
-                    g = glob.glob(os.path.join(cand, "*green.png"))
-                    r = glob.glob(os.path.join(cand, "*red.png"))
-                    if g and r:
+                shutil.copy(src, dst)
+                os.chmod(dst, 0o644)
+                decky.logger.info(f"[MuraDeck] Installed shader {fn}")
+            except Exception as e:
+                decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
+
+        # Only install missing textures
+        green_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*green.png"))
+        red_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*red.png"))
+        try:
+            if not os.path.exists(os.path.join(TEXTURE_DIR, "green.png")) and green_tmp:
+                shutil.copy(green_tmp[0], os.path.join(TEXTURE_DIR, "green.png"))
+                decky.logger.info("[MuraDeck] Copied green.png")
+            if not os.path.exists(os.path.join(TEXTURE_DIR, "red.png")) and red_tmp:
+                shutil.copy(red_tmp[0], os.path.join(TEXTURE_DIR, "red.png"))
+                decky.logger.info("[MuraDeck] Copied red.png")
+        except Exception as e:
+            decky.logger.error(f"[MuraDeck] Copy tmp textures error: {e}")
+
+        # Fallback ~/.config/gamescope/mura
+        try:
+            for cand in glob.glob(os.path.expanduser("~/.config/gamescope/mura/*")):
+                g = glob.glob(os.path.join(cand, "*green.png"))
+                r = glob.glob(os.path.join(cand, "*red.png"))
+                if g and r:
+                    if not os.path.exists(os.path.join(TEXTURE_DIR, "green.png")):
                         shutil.copy(g[0], os.path.join(TEXTURE_DIR, "green.png"))
+                        decky.logger.info("[MuraDeck] Copied fallback green.png")
+                    if not os.path.exists(os.path.join(TEXTURE_DIR, "red.png")):
                         shutil.copy(r[0], os.path.join(TEXTURE_DIR, "red.png"))
-                        decky.logger.info(
-                            "[MuraDeck] Copied textures from config fallback"
-                        )
-                        break
-            except Exception as e:
-                decky.logger.error(f"[MuraDeck] Fallback texture copy error: {e}")
+                        decky.logger.info("[MuraDeck] Copied fallback red.png")
+                    break
+        except Exception as e:
+            decky.logger.error(f"[MuraDeck] Fallback texture copy error: {e}")
 
-            for fn in MURA_SHADER_FILES:
-                src = os.path.join(PLUGIN_SHADERS_DIR, fn)
-                dst = os.path.join(SHADER_DIR, fn)
-                try:
-                    shutil.copy(src, dst)
-                    os.chmod(dst, 0o644)
-                    decky.logger.info(f"[MuraDeck] Installed shader {fn}")
-                except Exception as e:
-                    decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
-
-        # welcome flag
+        # Welcome flag
         seen = settings.getSetting("has_seen_welcome", None)
         if seen is None:
             decky.logger.info("[MuraDeck] First-time: mark welcome")
