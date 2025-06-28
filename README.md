@@ -1,6 +1,6 @@
 # Mura Corrector Deck | MuraDeck
 
-https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
+![MuraDeck](./assets/IMG_7395.JPG)
 
 ## Installation
 Since the plugin is still in the testing environments. You need to install it manually using Decky Loader.
@@ -9,7 +9,8 @@ Since the plugin is still in the testing environments. You need to install it ma
 3. Navigate to Developer and click ``Install Plugin from ZIP file``, browse to your downloaded plugin
 4. Done
 
-![MuraDeck](./assets/IMG_7395.JPG)
+## Ground Truth
+https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 ![MuraDeck](./assets/Ground%20Truth.png)
 
 ## Features
@@ -41,6 +42,9 @@ Originally, this plugin development was created to automagically switching betwe
 
 ## Credits
 Shaders & plugin is developed by MoonVeil Kanata ~ RenvyRere.
+## References
+- Film Grain - Christian Cann Schuldt Jensen ~ CeeJay.dk
+- Lift Gamma Gain - 3a and CeeJay.dk
 
 ## License
 Licensed under GPLv3 License.
