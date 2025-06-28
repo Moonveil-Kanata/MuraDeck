@@ -2,22 +2,10 @@
 
 ![MuraDeck](./assets/IMG_7395.JPG)
 
-## Installation
-Since the plugin is still in the testing environments. You need to install it manually using Decky Loader.
-1. Download the plugin from the release section, save it anywhere on your Steam Deck
-2. Navigate to Decky Loader Settings, and activate ``Developer mode``
-3. Navigate to Developer and click ``Install Plugin from ZIP file``, browse to your downloaded plugin
-4. Done
-
-## Ground Truth
-https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
-
-![MuraDeck](./assets/Ground%20Truth.png)
-
-## Features
+## Functionality
 Install it and forget it. Everything created, to automagically doing everything in the background for you:
-- Mura correction only on your bright pixel, to preserve pure black
-- Automatically shader switching between SDR/HDR profile (HDR PQ, HDR scRGB, and SDR)
+- Mura correction, only on your bright pixel. To preserve pure black
+- Automatically shader switching, between SDR/HDR profile (HDR PQ, HDR scRGB, and SDR)
 - Brightness adaptation, designed to adapt the mura map strength with the current brightness
 - Respect external monitor, automatically disable the plugin when external monitor connected
 - Automatically re-use previous shader when wake events detected
@@ -25,7 +13,12 @@ Install it and forget it. Everything created, to automagically doing everything 
 - Dithering only on dark areas, by using film grain
 - Gamma correction on dark areas
 
-Feel free to report a bug, if some of these features not working.
+Feel free to report a bug, if some of these core functionality not working.
+
+## Ground Truth
+https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
+
+![MuraDeck](./assets/Ground%20Truth.png)
 
 ## Known Limitations
 Shaders are designed to work with landscape 16:xx aspect ratio. Other than 16:xx ratios will causing mura looks worse, since it's designed to stretch to horizontal.
