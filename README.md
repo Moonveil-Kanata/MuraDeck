@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 
 ## 🔴 Known Limitations
 ### FSR/Sharp Issue
-Currently, SteamOS 3.7.8 FSR/Sharp settings is broken if combined with reshade [ValveGamescope#1903](https://github.com/ValveSoftware/gamescope/issues/1903#issuecomment-3016534405). Consider to set **Scaling Filter** to **LINEAR**.
+Currently, SteamOS 3.7.8 FSR/Sharp settings is broken if combined with reshade [ValveGamescope#1903](https://github.com/ValveSoftware/gamescope/issues/1903). Consider to set **Scaling Filter** to **LINEAR**.
 
 You will be guided through the plugin installation.
 
