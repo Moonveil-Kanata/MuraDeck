@@ -42,7 +42,15 @@ You will be guided through the plugin installation.
 ### Aspect Ratio
 Shaders are designed to work with landscape 16:xx aspect ratio. Other than 16:xx ratios will causing mura looks worse, since it's designed to stretch to horizontal, and cropped on vertical.
 
-During development, it was tested using `xwininfo` to get current window resolution. The difficulty starts, when trying to achieve the timing to trigger the ``xwininfo``. If some of you able to tackle this limitation, feel free to contribute to this project.
+During development, it was tested using `xwininfo` to get current window resolution. The difficulty starts, when trying to achieve the timing to trigger the ``xwininfo``.
+
+## 🟪 Contributions
+Dev, open for any contributions, including:
+- If some of you able to tackle those [limitation](#-known-limitations),
+- Additional features
+- Bug fix
+
+### Feel free to follow the [contribution](./CONTRIBUTION.md) guide.
 
 ## 🟡 TL;DR
 Average Samsung-panel on Steam Deck have known-issues called Mura Effect and raised gamma, where it has bad gray-uniformity on certain Hz and brightness. Resulting, grainy/dirty looks on the screen which can consider looks like a noise or film grain. Causing gradient effects on near-black looks like banding when fading into black. **While the current fix provided from valve unfortunately is raising the black level with the mura map keep showing on the black pixel.**
