@@ -664,7 +664,7 @@ class Plugin:
         os.makedirs(SHADER_DIR, exist_ok=True)
         os.makedirs(TEXTURE_DIR, exist_ok=True)
 
-        # Run shader extractor/setup always
+        # Mura map extractor
         decky.logger.info("[MuraDeck] Installing shaders (forced reinstall)...")
         for cmd in ["galileo-mura-extractor", "galileo-mura-setup"]:
             try:
@@ -684,7 +684,7 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
 
-        # Install all shaders from plugin directory (forced)
+        # Keep install all shaders
         for fn in MURA_SHADER_FILES:
             src = os.path.join(PLUGIN_SHADERS_DIR, fn)
             dst = os.path.join(SHADER_DIR, fn)
@@ -695,7 +695,7 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
 
-        # Only install missing textures
+        # Install missing textures
         green_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*green.png"))
         red_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*red.png"))
         try:

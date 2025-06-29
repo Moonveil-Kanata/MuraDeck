@@ -2,7 +2,7 @@
 
 >MuraDeck is originally developed to automagically switching between vkBasalt and Gamescope to fix your mura issue with better performance. Since SteamOS 3.7.8 the development scope is switching into full Gamescope reshade, since the reshade is gaining a performance update.
 
-![MuraDeck](./assets/IMG_7395.JPG)
+![MuraDeck](./assets/Markdown/IMG_7395.JPG)
 
 ## 🔵 Functionality
 Install it and forget it. Everything is created, to automagically doing everything in the background for you:
@@ -24,7 +24,7 @@ https://www.reddit.com/r/SteamDeck/comments/1lmemki/actual_mura_fix_plugin_for_y
 
 https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 
-![MuraDeck](./assets/Ground%20Truth.png)
+![MuraDeck](./assets/Markdown/Ground%20Truth.png)
 
 ## 🟢 Usage
 - Download from [Release](https://github.com/Moonveil-Kanata/MuraDeck/releases/), save it to any folder on Steam Deck
