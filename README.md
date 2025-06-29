@@ -33,6 +33,12 @@ https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 - Done
 
 ## 🔴 Known Limitations
+### FSR/Sharp Issue
+Currently, SteamOS 3.7.8 FSR/Sharp settings is broken if combined with reshade [ValveGamescope#1903](https://github.com/ValveSoftware/gamescope/issues/1903#issuecomment-3016534405). Consider to set **Scaling Filter** to **LINEAR**.
+
+You will be guided through the plugin installation.
+
+### Aspect Ratio
 Shaders are designed to work with landscape 16:xx aspect ratio. Other than 16:xx ratios will causing mura looks worse, since it's designed to stretch to horizontal.
 
 During development, it was tested using `xwininfo` to get current window resolution. The difficulty starts, when trying to achieve the timing to trigger the ``xwininfo``. If some of you able to tackle this limitation, feel free to contribute to this project.
