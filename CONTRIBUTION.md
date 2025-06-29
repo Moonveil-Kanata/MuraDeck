@@ -31,7 +31,7 @@ To keep things organized, kindly follow the steps below:
 
 ## 🟨 Plugin Standards
 
-Plugin originally motto is something taken from Apple philosophy "**it just works**". Install it and forget it.
+Plugin original motto is something taken from Apple philosophy "**it just works**". Install it and forget it.
 
 ### Maintaining original plugin goals
 
