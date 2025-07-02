@@ -665,7 +665,7 @@ class Plugin:
         os.makedirs(TEXTURE_DIR, exist_ok=True)
 
         # Mura map extractor
-        decky.logger.info("[MuraDeck] Installing shaders (forced reinstall)...")
+        decky.logger.info("[MuraDeck] Installing shaders...")
         for cmd in ["galileo-mura-extractor", "galileo-mura-setup"]:
             try:
                 env = os.environ.copy()
@@ -684,45 +684,51 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
 
-        # Keep install all shaders
-        for fn in MURA_SHADER_FILES:
-            src = os.path.join(PLUGIN_SHADERS_DIR, fn)
-            dst = os.path.join(SHADER_DIR, fn)
+            # Copy from /tmp/mura
             try:
-                shutil.copy(src, dst)
-                os.chmod(dst, 0o644)
-                decky.logger.info(f"[MuraDeck] Installed shader {fn}")
+                green_tmp = glob.glob(os.path.join("/tmp/mura", "*green.png"))
+                red_tmp = glob.glob(os.path.join("/tmp/mura", "*red.png"))
+                if green_tmp:
+                    shutil.copy(green_tmp[0], os.path.join(TEXTURE_DIR, "green.png"))
+                    decky.logger.info("[MuraDeck] Copied green.png from /tmp/mura")
+                if red_tmp:
+                    shutil.copy(red_tmp[0], os.path.join(TEXTURE_DIR, "red.png"))
+                    decky.logger.info("[MuraDeck] Copied red.png from /tmp/mura")
             except Exception as e:
-                decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
+                decky.logger.error(f"[MuraDeck] Failed to copy from /tmp/mura: {e}")
 
-        # Install missing textures
-        green_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*green.png"))
-        red_tmp = glob.glob(os.path.join(MURA_TMP_DIR, "*red.png"))
-        try:
-            if not os.path.exists(os.path.join(TEXTURE_DIR, "green.png")) and green_tmp:
-                shutil.copy(green_tmp[0], os.path.join(TEXTURE_DIR, "green.png"))
-                decky.logger.info("[MuraDeck] Copied green.png")
-            if not os.path.exists(os.path.join(TEXTURE_DIR, "red.png")) and red_tmp:
-                shutil.copy(red_tmp[0], os.path.join(TEXTURE_DIR, "red.png"))
-                decky.logger.info("[MuraDeck] Copied red.png")
-        except Exception as e:
-            decky.logger.error(f"[MuraDeck] Copy tmp textures error: {e}")
+            # Copy from ~/.config/gamescope/mura/{id}
+            try:
+                mura_config_dir = os.path.expanduser("~/.config/gamescope/mura")
+                candidate_dirs = glob.glob(os.path.join(mura_config_dir, "*"))
+                found = False
 
-        # Fallback ~/.config/gamescope/mura
-        try:
-            for cand in glob.glob(os.path.expanduser("~/.config/gamescope/mura/*")):
-                g = glob.glob(os.path.join(cand, "*green.png"))
-                r = glob.glob(os.path.join(cand, "*red.png"))
-                if g and r:
-                    if not os.path.exists(os.path.join(TEXTURE_DIR, "green.png")):
-                        shutil.copy(g[0], os.path.join(TEXTURE_DIR, "green.png"))
-                        decky.logger.info("[MuraDeck] Copied fallback green.png")
-                    if not os.path.exists(os.path.join(TEXTURE_DIR, "red.png")):
-                        shutil.copy(r[0], os.path.join(TEXTURE_DIR, "red.png"))
-                        decky.logger.info("[MuraDeck] Copied fallback red.png")
-                    break
-        except Exception as e:
-            decky.logger.error(f"[MuraDeck] Fallback texture copy error: {e}")
+                for candidate in candidate_dirs:
+                    green = glob.glob(os.path.join(candidate, "*green.png"))
+                    red = glob.glob(os.path.join(candidate, "*red.png"))
+                    if green and red:
+                        shutil.copy(green[0], os.path.join(TEXTURE_DIR, "green.png"))
+                        shutil.copy(red[0], os.path.join(TEXTURE_DIR, "red.png"))
+                        decky.logger.info(f"[MuraDeck] Copied green.png from {candidate}")
+                        decky.logger.info(f"[MuraDeck] Copied red.png from {candidate}")
+                        found = True
+                        break
+
+                if not found:
+                    decky.logger.warn("[MuraDeck] No valid fallback texture found in ~/.config/gamescope/mura")
+            except Exception as e:
+                decky.logger.error(f"[MuraDeck] Failed to fallback copy from ~/.config/gamescope/mura: {e}")
+
+            # Keep install all shaders
+            for fn in MURA_SHADER_FILES:
+                src = os.path.join(PLUGIN_SHADERS_DIR, fn)
+                dst = os.path.join(SHADER_DIR, fn)
+                try:
+                    shutil.copy(src, dst)
+                    os.chmod(dst, 0o644)
+                    decky.logger.info(f"[MuraDeck] Installed shader {fn}")
+                except Exception as e:
+                    decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
 
         # Welcome flag
         seen = settings.getSetting("has_seen_welcome", None)
