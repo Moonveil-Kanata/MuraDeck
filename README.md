@@ -62,9 +62,11 @@ This fix will use combination between **film grain for dithering, lift & gamma (
 
 ## Credits
 Shaders & plugin is developed by MoonVeil Kanata ~ RenvyRere.
+
 ## References
 - Film Grain - Christian Cann Schuldt Jensen ~ CeeJay.dk
 - Lift Gamma Gain - 3a and CeeJay.dk
+- AMD CAS with various optimization - martymcmodding
 
 ## License
 Licensed under GPLv3 License.
