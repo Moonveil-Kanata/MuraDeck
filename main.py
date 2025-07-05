@@ -109,6 +109,8 @@ class Plugin:
         self._lgg_enabled_hdr = settings.getSetting("lgg_enabled_hdr", True)
 
         self._last_game_state: dict[int, bool] = {}
+        self._app_profile_cache: dict[int, str] = {}
+        self._last_focused_appid: int | None = None
 
         self._grain_enabled = self._grain_enabled_sdr
         self._lgg_enabled = self._lgg_enabled_sdr
@@ -256,6 +258,32 @@ class Plugin:
             print(f"[get_steam_icon] Error: {e}")
             return None
         
+    async def on_focus_change(self):
+        appid = await self.get_focused_appid()
+        if appid is None or appid == self._last_focused_appid:
+            return
+
+        if self.current_appid is not None and self.profile is not None:
+            try:
+                prev_appid = int(self.current_appid)
+                self._app_profile_cache[prev_appid] = self.profile
+                decky.logger.info(f"[MuraDeck] Saved profile '{self.profile}' for AppID={prev_appid}")
+            except Exception as e:
+                decky.logger.warning(f"[MuraDeck] Save profile cache error: {e}")
+
+        self._last_focused_appid = appid
+        self.current_appid = str(appid)
+        decky.logger.info(f"[MuraDeck] Focus changed to AppID={appid}")
+
+        saved_profile = self._app_profile_cache.get(appid)
+        if saved_profile:
+            decky.logger.info(f"[MuraDeck] Restoring profile '{saved_profile}' for AppID={appid}")
+            await self._set_profile(saved_profile)
+            await self._patch_fx(self.current_effect)
+            await self._set_effect(self.current_effect)
+        else:
+            decky.logger.info(f"[MuraDeck] No saved profile for AppID={appid}, using current")
+        
     async def on_game_state_update(self, appid: int, running: bool):
         # Fix redundant events from frontend
         last_state = self._last_game_state.get(appid)
@@ -266,6 +294,11 @@ class Plugin:
         if running:
             self.current_appid = str(appid)
             decky.logger.info(f"[MuraDeck] Game started: {appid}")
+
+            wants_hdr = await self.check_gamescope_hdr()
+            if not wants_hdr:
+                decky.logger.info(f"[MuraDeck] Gamescope isn't HDR → SDR profile")
+                await self._set_profile("SDR")
 
             sharp = await self.get_sharpness(appid)
             cas = await self.get_cas(appid)
@@ -282,6 +315,9 @@ class Plugin:
                 await self._set_effect(self.current_effect)
 
         else:
+            if appid in self._app_profile_cache:
+                del self._app_profile_cache[appid]
+                decky.logger.info(f"[MuraDeck] Cleared saved profile for closed AppID={appid}")
             decky.logger.info(f"[MuraDeck] Game closed: {appid}")
             self.current_appid = None
             self._current_sharpness = 0.0
@@ -324,6 +360,56 @@ class Plugin:
                 else:
                     await self._set_profile("SDR")
 
+    async def get_focused_appid(self):
+        try:
+            cmd = 'export DISPLAY=:0 && xprop -root GAMESCOPE_FOCUSED_APP'
+            proc = await asyncio.create_subprocess_shell(
+                cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=os.environ
+            )
+            stdout, stderr = await proc.communicate()
+            if proc.returncode == 0:
+                output = stdout.decode().strip()
+                match = re.search(r"GAMESCOPE_FOCUSED_APP\(CARDINAL\) = (\d+)", output)
+                if match:
+                    appid = int(match.group(1))
+                    decky.logger.info(f"[MuraDeck] Focused AppID: {appid}")
+                    return appid
+                else:
+                    decky.logger.warning("[MuraDeck] GAMESCOPE_FOCUSED_APP not found in xprop output")
+            else:
+                decky.logger.error(f"[MuraDeck] Failed to run xprop: {stderr.decode().strip()}")
+        except Exception as e:
+            decky.logger.error(f"[MuraDeck] get_focused_appid error: {e}")
+        return None
+    
+    async def check_gamescope_hdr(self) -> bool:
+        try:
+            cmd = 'export DISPLAY=:0 && xprop -root GAMESCOPE_COLOR_APP_WANTS_HDR_FEEDBACK'
+            proc = await asyncio.create_subprocess_shell(
+                cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=os.environ
+            )
+            stdout, stderr = await proc.communicate()
+            if proc.returncode == 0:
+                output = stdout.decode().strip()
+                match = re.search(r"GAMESCOPE_COLOR_APP_WANTS_HDR_FEEDBACK\(CARDINAL\) = (\d+)", output)
+                if match:
+                    value = int(match.group(1))
+                    decky.logger.info(f"[MuraDeck] HDR Feedback Requested: {value}")
+                    return value == 1
+                else:
+                    decky.logger.warning("[MuraDeck] HDR Feedback info not found in xprop output")
+            else:
+                decky.logger.error(f"[MuraDeck] xprop HDR check failed: {stderr.decode().strip()}")
+        except Exception as e:
+            decky.logger.error(f"[MuraDeck] HDR feedback check error: {e}")
+        return False
+
     async def _ext_monitor_watcher(self):
         if not os.path.exists(LOG_DISPLAYMGR):
             decky.logger.warning(
@@ -346,6 +432,9 @@ class Plugin:
             if match:
                 state = match.group(1)
                 decky.logger.info(f"[Monitor Watcher] External = {state}")
+
+                # Call focused appid
+                await self.on_focus_change()
                 if state == "1":
                     self._is_external_display = True
                     await emit("monitor_changed", True)
