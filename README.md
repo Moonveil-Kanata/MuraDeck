@@ -15,7 +15,7 @@ Install it and forget it. Everything is created, to automagically doing everythi
 - Automatically runs on boot
 - Dithering only on dark areas, by using film grain
 - Gamma correction on dark areas
-- AMD CAS with global/per-game profile, and divided into int/ext monitor. Works with 
+- AMD CAS with global/per-game profile, and divided into int/ext monitor. Works with any resolutions.
 
 Feel free to report a bug, if some of these core functionality not working.
 
