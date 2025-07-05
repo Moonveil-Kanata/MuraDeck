@@ -2,7 +2,7 @@
 
 >MuraDeck is originally developed to automagically switching between vkBasalt and Gamescope to fix your mura issue with better performance. Since SteamOS 3.7.8 the development scope is switching into full Gamescope reshade, since the reshade is gaining a performance update.
 
-![MuraDeck](./assets/Markdown/IMG_7395.JPG)
+![MuraDeck](./assets/Markdown/IMG_7410.JPG)
 
 ## 🔵 Functionality
 Install it and forget it. Everything is created, to automagically doing everything in the background for you:
@@ -15,6 +15,7 @@ Install it and forget it. Everything is created, to automagically doing everythi
 - Automatically runs on boot
 - Dithering only on dark areas, by using film grain
 - Gamma correction on dark areas
+- AMD CAS with global/per-game profile, and divided into int/ext monitor. Works with 
 
 Feel free to report a bug, if some of these core functionality not working.
 
