@@ -5,6 +5,8 @@ import decky
 import asyncio
 import shutil
 import glob
+import base64
+from decky import emit
 
 from settings import SettingsManager
 
@@ -22,6 +24,7 @@ MURA_TMP_DIR = "/tmp/mura"
 PLUGIN_SHADERS_DIR = os.path.join(os.path.dirname(__file__), "shaders")
 
 MURA_SHADER_FILES = [
+    "CAS.fx",
     "MuraDeck_SDR.fx",
     "MuraDeck_HDR10PQ.fx",
     "MuraDeck_HDRscRGB.fx",
@@ -34,12 +37,15 @@ MURA_TEXTURE_FILES = [
     "red.png",
 ]
 
+STEAM_ICON_PATH = os.path.expanduser("~/.steam/steam/appcache/librarycache")
+
 LOG_DIR = os.path.expanduser("~/.steam/steam/logs")
 LOG_LINUX = os.path.join(LOG_DIR, "console-linux.txt")
 LOG_GAMEPROC = os.path.join(LOG_DIR, "gameprocess_log.txt")
 LOG_DISPLAYMGR = os.path.join(LOG_DIR, "systemdisplaymanager.txt")
 
 FX_DIR = os.path.expanduser("~/.local/share/gamescope/reshade/Shaders")
+FX_CAS = "CAS.fx"
 FX_SDR = "MuraDeck_SDR.fx"
 FX_HDR10PQ = "MuraDeck_HDR10PQ.fx"
 FX_HDRscRGB = "MuraDeck_HDRscRGB.fx"
@@ -93,15 +99,29 @@ class Plugin:
         self._monitor_watch_enabled = settings.getSetting(
             "watch_external_monitor", True
         )
+        self._is_external_display = False
         self._monitor_watch_task = None
+        self._use_cas_only = False
 
         self._grain_enabled_sdr = settings.getSetting("grain_enabled_sdr", True)
         self._lgg_enabled_sdr = settings.getSetting("lgg_enabled_sdr", True)
         self._grain_enabled_hdr = settings.getSetting("grain_enabled_hdr", True)
         self._lgg_enabled_hdr = settings.getSetting("lgg_enabled_hdr", True)
 
+        self._last_game_state: dict[int, bool] = {}
+
         self._grain_enabled = self._grain_enabled_sdr
         self._lgg_enabled = self._lgg_enabled_sdr
+
+        # CAS & Sharpness default by monitor type
+        if self._is_external_display:
+            # External monitor → CAS ON, sharpness 0.0
+            self._current_cas: bool = settings.getSetting("cas_enabled_global_external", True)
+            self._current_sharpness: float = settings.getSetting("sharpness_global_external", 0.0)
+        else:
+            # Internal monitor → CAS OFF, sharpness 0.0
+            self._current_cas: bool = settings.getSetting("cas_enabled_global_internal", False)
+            self._current_sharpness: float = settings.getSetting("sharpness_global_internal", 0.0)
 
         self._brightness_enabled = settings.getSetting("brightness_enabled", True)
 
@@ -223,27 +243,69 @@ class Plugin:
 
     async def get_brightness_enabled(self) -> bool:
         return self._brightness_enabled
+    
+    async def get_steam_icon(self, appid: int, icon_hash: str) -> str | None:
+        try:
+            path = os.path.join(STEAM_ICON_PATH, str(appid), f"{icon_hash}.jpg")
+            if not os.path.exists(path):
+                return None
+            with open(path, "rb") as f:
+                encoded = base64.b64encode(f.read()).decode("utf-8")
+                return encoded
+        except Exception as e:
+            print(f"[get_steam_icon] Error: {e}")
+            return None
+        
+    async def on_game_state_update(self, appid: int, running: bool):
+        # Fix redundant events from frontend
+        last_state = self._last_game_state.get(appid)
+        if last_state == running:
+            return
+        self._last_game_state[appid] = running
+
+        if running:
+            self.current_appid = str(appid)
+            decky.logger.info(f"[MuraDeck] Game started: {appid}")
+
+            sharp = await self.get_sharpness(appid)
+            cas = await self.get_cas(appid)
+            self._current_sharpness = sharp
+            self._current_cas = cas
+
+            if self._use_cas_only:
+                decky.logger.info(f"[MuraDeck] [CAS-only] Applying sharp={sharp}, cas={cas}")
+                await self._patch_fx(FX_CAS)
+                await self._set_effect(FX_CAS)
+            else:
+                await self._apply_current_profile()
+                await self._patch_fx(self.current_effect)
+                await self._set_effect(self.current_effect)
+
+        else:
+            decky.logger.info(f"[MuraDeck] Game closed: {appid}")
+            self.current_appid = None
+            self._current_sharpness = 0.0
+            self._current_cas = False
+
+            await self._set_profile("SDR")
+            await self._patch_fx(self.current_effect)
+            await self._set_effect(self.current_effect)
 
     async def _log_watcher(self):
         for p in (LOG_LINUX, LOG_GAMEPROC):
             if not os.path.exists(p):
-                decky.logger.warn(f"[MuraDeck] Log not found: {p}")
+                decky.logger.warning(f"[MuraDeck] Log not found: {p}")
 
         proc = await asyncio.create_subprocess_exec(
-            "tail",
-            "-F",
-            LOG_LINUX,
-            LOG_GAMEPROC,
+            "tail", "-F", LOG_LINUX, LOG_GAMEPROC,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
         assert proc.stdout
 
-        re_appid = re.compile(r"AppId=(\d+)")
         re_colorspace = re.compile(
             r"colorspace:.*(HDR10_ST2084|SRGB_NONLINEAR|SRGB_LINEAR)"
         )
-        re_gamestop = re.compile(r"game stopped")
 
         while True:
             line = await proc.stdout.readline()
@@ -251,14 +313,7 @@ class Plugin:
                 break
             text = line.decode("utf-8", "ignore").rstrip()
 
-            # AppId
-            m = re_appid.search(text)
-            if m:
-                self.current_appid = m.group(1)
-                decky.logger.info(f"[MuraDeck] [LogWatch] AppId={self.current_appid}")
-                continue
-
-            # Colorspace
+            # Only handle HDR color space detection
             m = re_colorspace.search(text)
             if m:
                 cs = m.group(1)
@@ -268,18 +323,10 @@ class Plugin:
                     await self._set_profile("HDRscRGB")
                 else:
                     await self._set_profile("SDR")
-                continue
-
-            # Game Stopped
-            if re_gamestop.search(text):
-                decky.logger.info("[LogWatch] Game stopped → revert to SDR")
-                await self._set_profile("SDR")
-                self.current_appid = None
-                continue
 
     async def _ext_monitor_watcher(self):
         if not os.path.exists(LOG_DISPLAYMGR):
-            decky.logger.warn(
+            decky.logger.warning(
                 "[MuraDeck] Log not found, failed to watch external monitor"
             )
             return
@@ -299,12 +346,37 @@ class Plugin:
             if match:
                 state = match.group(1)
                 decky.logger.info(f"[Monitor Watcher] External = {state}")
-                if state == "1" and self._enabled:
-                    decky.logger.info("[Monitor] External → disabling")
-                    await self.toggle_enabled(False)
-                elif state == "0" and not self._enabled:
-                    decky.logger.info("[Monitor] Internal → re-enabling")
-                    await self.toggle_enabled(True)
+                if state == "1":
+                    self._is_external_display = True
+                    await emit("monitor_changed", True)
+                    if self._monitor_watch_enabled:
+                        decky.logger.info("[Monitor] External + Watch ON → CAS-only mode")
+                        self._use_cas_only = True
+                        if self._watch_task is None or self._watch_task.done():
+                            self._watch_task = asyncio.create_task(self._log_watcher())
+                        await self._patch_fx(FX_CAS)
+                        await self._set_effect(FX_CAS)
+                    else:
+                        decky.logger.info("[Monitor] External + Watch OFF → normal MuraDeck")
+                        self._use_cas_only = False
+                        await self.toggle_enabled(True)
+                elif state == "0":
+                    self._is_external_display = False
+                    await emit("monitor_changed", True)
+                    self._use_cas_only = False
+                    if self._monitor_watch_enabled:
+                        decky.logger.info("[Monitor] External disconnected → restoring MuraDeck")
+                        if self._watch_task is None or self._watch_task.done():
+                            self._watch_task = asyncio.create_task(self._log_watcher())
+                        await self._apply_current_profile()
+                        await self._patch_fx(self.current_effect)
+                        await self._set_effect(self.current_effect)
+                    else:
+                        await self.toggle_enabled(True)
+
+
+    async def is_external_display(self) -> bool:
+        return self._is_external_display
 
     async def toggle_ext_monitor_watcher(self, enable: bool):
         settings.setSetting("watch_external_monitor", enable)
@@ -401,8 +473,158 @@ class Plugin:
 
     async def get_lgg(self) -> bool:
         return self._lgg_enabled
+    
+    # Global Sharpness
+    async def set_global_sharpness(self, value: float):
+        key = (
+            "sharpness_global_external"
+            if self._is_external_display else
+            "sharpness_global_internal"
+        )
+        settings.setSetting(key, value)
+        settings.commit()
 
-    async def _patch_fx(self, fx_name: str, map_scale: float | None = None, fade_near: float | None = None):
+    async def get_global_sharpness(self) -> float:
+        key = (
+            "sharpness_global_external"
+            if self._is_external_display else
+            "sharpness_global_internal"
+        )
+        return settings.getSetting(key, 0.0)
+
+    # Per-App Sharpness
+    async def set_app_sharpness(self, appid: int, value: float):
+        key = (
+            f"sharpness_app_{appid}_external"
+            if self._is_external_display else
+            f"sharpness_app_{appid}_internal"
+        )
+        settings.setSetting(key, value)
+        settings.commit()
+
+    async def get_app_sharpness(self, appid: int) -> float | None:
+        key = (
+            f"sharpness_app_{appid}_external"
+            if self._is_external_display else
+            f"sharpness_app_{appid}_internal"
+        )
+        return settings.getSetting(key, None)
+    
+    # Per-App Enabled
+    async def set_per_app_enabled(self, appid: int, enabled: bool):
+        settings.setSetting(f"sharpness_perapp_enabled_{appid}", enabled)
+        settings.commit()
+
+    async def get_per_app_enabled(self, appid: int) -> bool:
+        return settings.getSetting(f"sharpness_perapp_enabled_{appid}", False)
+    
+    # Global CAS toggle
+    async def set_global_cas(self, value: bool):
+        key = (
+            "cas_enabled_global_external"
+            if self._is_external_display else
+            "cas_enabled_global_internal"
+        )
+        settings.setSetting(key, value)
+        settings.commit()
+
+    async def get_global_cas(self) -> bool:
+        key = (
+            "cas_enabled_global_external"
+            if self._is_external_display else
+            "cas_enabled_global_internal"
+        )
+        return settings.getSetting(key, False)
+    
+    # Per-App CAS toggle
+    async def set_app_cas(self, appid: int, value: bool):
+        key = (
+            f"cas_enabled_app_{appid}_external"
+            if self._is_external_display else
+            f"cas_enabled_app_{appid}_internal"
+        )
+        settings.setSetting(key, value)
+        settings.commit()
+
+    async def get_app_cas(self, appid: int) -> bool | None:
+        key = (
+            f"cas_enabled_app_{appid}_external"
+            if self._is_external_display else
+            f"cas_enabled_app_{appid}_internal"
+        )
+        return settings.getSetting(key, None)
+
+    async def set_cas_perapp_enabled(self, appid: int, enabled: bool):
+        settings.setSetting(f"cas_perapp_enabled_{appid}", enabled)
+        settings.commit()
+
+    async def get_cas_perapp_enabled(self, appid: int) -> bool:
+        return settings.getSetting(f"cas_perapp_enabled_{appid}", False)
+    
+    # CAS Activation
+    async def set_cas(self, value: bool, appid: int | None, per_app: bool):
+        if per_app and appid is not None:
+            await self.set_app_cas(appid, value)
+        else:
+            await self.set_global_cas(value)
+
+        self._current_cas = value
+
+        await self._patch_fx(self.current_effect)
+        await self._set_effect(self.current_effect)
+
+    async def get_cas(self, appid: int | None = None) -> bool:
+        if appid is not None and await self.get_cas_perapp_enabled(appid):
+            val = await self.get_app_cas(appid)
+            if val is not None:
+                return val
+        return await self.get_global_cas()
+
+    async def toggle_cas_perapp(self, appid: int, enable: bool):
+        await self.set_cas_perapp_enabled(appid, enable)
+        val = await self.get_cas(appid)
+
+        self._current_cas = val
+
+        await self._patch_fx(self.current_effect)
+        await self._set_effect(self.current_effect)
+    
+    # Sharpness
+    async def set_sharpness(self, value: float, appid: int | None, per_app: bool):
+        if per_app and appid is not None:
+            await self.set_app_sharpness(appid, value)
+        else:
+            await self.set_global_sharpness(value)
+
+        self._current_sharpness = value
+        await self._patch_fx(self.current_effect)
+        await self._set_effect(self.current_effect)
+
+    async def get_sharpness(self, appid: int | None = None) -> float:
+        if appid is not None and await self.get_per_app_enabled(appid):
+            v = await self.get_app_sharpness(appid)
+            if v is not None:
+                return v
+        return await self.get_global_sharpness()
+    
+    async def toggle_sharpness_perapp(self, appid: int, enable: bool):
+        await self.set_per_app_enabled(appid, enable)
+
+        value = await self.get_sharpness(appid)
+
+        self._current_sharpness = value
+        await self._patch_fx(self.current_effect)
+        await self._set_effect(self.current_effect)
+
+    async def get_sharpness_perapp_enabled(self, appid: int) -> bool:
+        return await self.get_per_app_enabled(appid)
+
+    async def _patch_fx(
+            self, fx_name: str, map_scale: float | None = None,
+            fade_near: float | None = None):
+        if self._use_cas_only:
+            fx_name = FX_CAS
+        
         path = os.path.join(FX_DIR, fx_name)
         if not os.path.isfile(path):
             decky.logger.error(f"[MuraDeck] FX file not found: {path}")
@@ -428,6 +650,9 @@ class Plugin:
                 lgg_gamma_value = 1.0
             grain_value = 0.01 if self._grain_enabled else 0.0
 
+        cas_enabled = 1.0 if self._current_cas else 0.0
+        sharpness = self._current_sharpness
+
         with open(path, "r") as f:
             lines = f.readlines()
 
@@ -436,6 +661,36 @@ class Plugin:
         while i < len(lines):
             line = lines[i]
             stripped = line.strip()
+
+            # CAS toggle
+            if cas_enabled is not None and "uniform float CAS_Enabled" in stripped:
+                while i < len(lines) and ">" not in lines[i]:
+                    i += 1
+                i += 1
+                out.extend([
+                    'uniform float CAS_Enabled <\n',
+                    '\tui_label = "Turn On/Off CAS";\n',
+                    '\tui_tooltip = "0 := disable, to 1 := enable.";\n',
+                    '\tui_min = 0.0; ui_max = 1.0;\n',
+                    '\tui_step = 1.0;\n',
+                    f'> = {cas_enabled};\n'
+                ])
+                continue
+
+            # patch Sharpness
+            if sharpness is not None and "uniform float Sharpness" in stripped:
+                while i < len(lines) and ">" not in lines[i]:
+                    i += 1
+                i += 1
+                out.extend([
+                    'uniform float Sharpness <\n',
+                    '\tui_type = "drag";\n',
+                    '\tui_label = "Sharpening strength";\n',
+                    '\tui_tooltip = "0 := no sharpening, to 1 := full sharpening.";\n',
+                    '\tui_min = 0.0; ui_max = 1.0;\n',
+                    f'> = {sharpness};\n'
+                ])
+                continue
 
             # patch MuraMapScale
             if map_scale is not None and "uniform float MuraMapScale" in stripped:
@@ -522,11 +777,12 @@ class Plugin:
         decky.logger.info(
             f"[MuraDeck] FX patched: {fx_name} → Grain={grain_value}, "
             f"LGG Lift/Gamma=({lgg_lift_value},{lgg_gamma_value})"
+            f"CAS={cas_enabled}, Sharpness={sharpness}"
         )
 
     async def _clear_effect(self):
         cmd = (
-            'export DISPLAY=:0 && '
+            'export DISPLAY=:1 && '
             'xprop -root -f GAMESCOPE_RESHADE_EFFECT 8u '
             '-set GAMESCOPE_RESHADE_EFFECT None'
         )
@@ -546,7 +802,7 @@ class Plugin:
         decky.logger.info("[MuraDeck] DirectFX apply")
         effect_name = self.current_effect or FX_SDR
         cmd = (
-            f'export DISPLAY=:0 && '
+            f'export DISPLAY=:1 && '
             f'xprop -root -f GAMESCOPE_RESHADE_EFFECT 8u '
             f'-set GAMESCOPE_RESHADE_EFFECT {effect_name}'
         )
@@ -563,9 +819,12 @@ class Plugin:
             decky.logger.error(f"[MuraDeck] DirectFX error: {err.decode().strip()}")
 
     async def _set_effect(self, effect_name: str):
+        if self._use_cas_only:
+            effect_name = FX_CAS
+
         temp = effect_name.replace(".fx", "_temp.fx")
         cmd = (
-            f'export DISPLAY=:0 && '
+            f'export DISPLAY=:1 && '
             f'xprop -root -f GAMESCOPE_RESHADE_EFFECT 8u '
             f'-set GAMESCOPE_RESHADE_EFFECT {temp} && '
             'sleep 0.5 && '
@@ -684,6 +943,17 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
 
+            # Keep install all shaders
+            for fn in MURA_SHADER_FILES:
+                src = os.path.join(PLUGIN_SHADERS_DIR, fn)
+                dst = os.path.join(SHADER_DIR, fn)
+                try:
+                    shutil.copy(src, dst)
+                    os.chmod(dst, 0o644)
+                    decky.logger.info(f"[MuraDeck] Installed shader {fn}")
+                except Exception as e:
+                    decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
+                    
             # Copy from /tmp/mura
             try:
                 green_tmp = glob.glob(os.path.join("/tmp/mura", "*green.png"))
@@ -715,20 +985,10 @@ class Plugin:
                         break
 
                 if not found:
-                    decky.logger.warn("[MuraDeck] No valid fallback texture found in ~/.config/gamescope/mura")
+                    decky.logger.warning("[MuraDeck] No valid fallback texture found in ~/.config/gamescope/mura")
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Failed to fallback copy from ~/.config/gamescope/mura: {e}")
 
-            # Keep install all shaders
-            for fn in MURA_SHADER_FILES:
-                src = os.path.join(PLUGIN_SHADERS_DIR, fn)
-                dst = os.path.join(SHADER_DIR, fn)
-                try:
-                    shutil.copy(src, dst)
-                    os.chmod(dst, 0o644)
-                    decky.logger.info(f"[MuraDeck] Installed shader {fn}")
-                except Exception as e:
-                    decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
 
         # Welcome flag
         seen = settings.getSetting("has_seen_welcome", None)

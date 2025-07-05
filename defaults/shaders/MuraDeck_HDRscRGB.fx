@@ -1,6 +1,6 @@
 /**
  * MuraDeck
- * by RenvyRere ~ Moonveil-Kanata
+ * by RenvyRere - Moonveil-Kanata
  *
  * Fix Mura Effect on OLED Panel, by Combining Lift Gamma Gain and Film Grain as dithering on dark pixel, while Mura map on the bright pixel.
  */

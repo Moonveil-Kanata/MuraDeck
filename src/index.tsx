@@ -12,6 +12,7 @@ import { MENU_ROUTE } from "./router/routes";
 import { isNewUser } from "./hooks/newUser";
 import { registerResumeListener } from "./hooks/resumeListener";
 import { registerBrightnessListener } from "./hooks/brightnessListener";
+import { registerGameStateListener } from "./hooks/gameListener";
 
 const getPluginEnabled = callable<[], boolean>("get_enabled");
 const directEffect = callable<[], void>("direct_effect");
@@ -22,6 +23,8 @@ export default definePlugin(() => {
   routerHook.addRoute(MENU_ROUTE, () => <Menu />);
 
   isNewUser();
+
+  registerGameStateListener();
 
   (async () => {
     const enabled = await getPluginEnabled();

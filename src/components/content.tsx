@@ -1,10 +1,11 @@
 import {
   ToggleField,
   PanelSection,
-  PanelSectionRow
+  PanelSectionRow,
+  SliderField
 } from "@decky/ui";
-import { call } from "@decky/api";
-import { useState, useEffect } from "react";
+import { call, addEventListener, removeEventListener } from "@decky/api";
+import { useState, useEffect, useCallback } from "react";
 import { FaInfoCircle } from "react-icons/fa";
 
 import { STATUS_ROUTE } from "../router/routes";
@@ -16,13 +17,25 @@ import { Desc } from "./defines/descriptor";
 
 export function Content() {
   const [welcomePassed, setWelcomePassed] = useState(false);
-
   const [enabled, setEnabled] = useState(true);
   const [brightnessEnabled, setBrightnessEnabled] = useState(true);
   const [grain, setGrain] = useState(false);
   const [lgg, setLGG] = useState(false);
   const [monitorWatch, setMonitorWatch] = useState(true);
   const [shaderReady, setShaderReady] = useState<boolean | null>(null);
+
+  const [currentApp, setCurrentApp] = useState<{
+    appid: number;
+    name: string;
+    icon?: string;
+  } | null>(null);
+
+  const [sharpness, setSharpness] = useState(0);
+  const [casEnabled, setCasEnabled] = useState(false);
+  const [perAppCas, setPerAppCas] = useState(false);
+  const [perAppSharpness, setPerAppSharpness] = useState(false);
+
+  const [externalMonitor, setExternalMonitor] = useState<boolean | null>(null);
 
   const [isTogglingEnabled, setIsTogglingEnabled] = useState(false);
   const [isTogglingBrightness, setIsTogglingBrightness] = useState(false);
@@ -31,46 +44,7 @@ export function Content() {
 
   const displayMode = DisplayMode();
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const [en, mon, bright, seen] = await Promise.all([
-          call<[], boolean>("get_enabled"),
-          call<[], boolean>("get_ext_monitor_watcher"),
-          call<[], boolean>("get_brightness_enabled"),
-          call<[], boolean>("get_has_seen_welcome")
-        ]);
-        setEnabled(en);
-        setMonitorWatch(mon);
-        setBrightnessEnabled(bright);
-        setWelcomePassed(seen);
-      } catch (e) {
-        console.error("Failed to fetch:", e);
-      }
-
-      try {
-        if (displayMode !== null) {
-          const g = await call<[], boolean>("get_grain");
-          const l = await call<[], boolean>("get_lgg");
-          setGrain(g);
-          setLGG(l);
-        }
-      } catch (e) {
-        console.error("Failed to fetch grain/lgg:", e);
-      }
-
-      try {
-        const ok = await call<[], boolean>("check_shader_status");
-        setShaderReady(ok);
-      } catch (e) {
-        console.error("Failed to check shader status:", e);
-        setShaderReady(false);
-      }
-    };
-
-    init();
-  }, [displayMode]);
-
+  // Delay toggle helper
   const delayToggle = async (
     apiFn: string,
     value: boolean,
@@ -81,13 +55,138 @@ export function Content() {
     setState(value);
     try {
       await call<[boolean], void>(apiFn, value);
-      await new Promise(res => setTimeout(res, 500));
+      await new Promise((r) => setTimeout(r, 500));
     } catch (e) {
       console.error(`[${apiFn}] failed`, e);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
+
+  // Refresh all related state from backend
+  const refreshAll = useCallback(async () => {
+    // external monitor
+    try {
+      const ext = await call<[], boolean>("is_external_display");
+      setExternalMonitor(ext);
+    } catch { }
+
+    // global toggles + welcome + shader status
+    try {
+      const [en, mon, bright, seen, ok] = await Promise.all([
+        call<[], boolean>("get_enabled"),
+        call<[], boolean>("get_ext_monitor_watcher"),
+        call<[], boolean>("get_brightness_enabled"),
+        call<[], boolean>("get_has_seen_welcome"),
+        call<[], boolean>("check_shader_status"),
+      ]);
+      setEnabled(en);
+      setMonitorWatch(mon);
+      setBrightnessEnabled(bright);
+      setWelcomePassed(seen);
+      setShaderReady(ok);
+    } catch { }
+
+    // grain & LGG
+    if (displayMode !== null) {
+      try {
+        const [g, l] = await Promise.all([
+          call<[], boolean>("get_grain"),
+          call<[], boolean>("get_lgg"),
+        ]);
+        setGrain(g);
+        setLGG(l);
+      } catch { }
+    }
+
+    // per-app or global sharpness & CAS
+    if (currentApp?.appid) {
+      try {
+        const [sEn, sVal, cEn, cVal] = await Promise.all([
+          call<[number], boolean>("get_sharpness_perapp_enabled", currentApp.appid),
+          call<[number], number>("get_sharpness", currentApp.appid),
+          call<[number], boolean>("get_cas_perapp_enabled", currentApp.appid),
+          call<[number], boolean>("get_cas", currentApp.appid),
+        ]);
+        setPerAppSharpness(sEn);
+        setSharpness(sVal);
+        setPerAppCas(cEn);
+        setCasEnabled(cVal);
+      } catch { }
+    } else {
+      try {
+        const [sVal, cVal] = await Promise.all([
+          call<[], number>("get_sharpness"),
+          call<[], boolean>("get_cas"),
+        ]);
+        setSharpness(sVal);
+        setCasEnabled(cVal);
+      } catch { }
+    }
+  }, [currentApp?.appid, displayMode]);
+
+  // Init + backend→frontend events
+  useEffect(() => {
+    refreshAll();
+
+    const onMonitor = (_: any, isExt: boolean) => {
+      setExternalMonitor(isExt);
+      refreshAll();
+    };
+    const onAppProf = (_: any, appid: number, perApp: boolean) => {
+      refreshAll();
+    };
+
+    addEventListener("monitor_changed", onMonitor);
+    addEventListener("app_profile_applied", onAppProf);
+
+    return () => {
+      removeEventListener("monitor_changed", onMonitor);
+      removeEventListener("app_profile_applied", onAppProf);
+    };
+  }, [refreshAll]);
+
+  // Detect running Steam game
+  useEffect(() => {
+    const loadAppInfo = async () => {
+      try {
+        const running = (window as any).SteamUIStore?.RunningApps;
+        if (Array.isArray(running) && running.length > 0) {
+          const app = running[0];
+          let iconUrl: string | undefined;
+
+          if (app.icon_data) {
+            const fmt = app.icon_data_format ?? "png";
+            iconUrl = `data:image/${fmt};base64,${app.icon_data}`;
+          } else if (app.icon_hash) {
+            const b64 = await call<[number, string], string | null>(
+              "get_steam_icon",
+              app.appid,
+              app.icon_hash
+            );
+            if (b64) iconUrl = `data:image/jpeg;base64,${b64}`;
+          }
+
+          setCurrentApp({
+            appid: app.appid,
+            name: app.display_name ?? "Unknown",
+            icon: iconUrl,
+          });
+        } else {
+          setCurrentApp(null);
+        }
+      } catch (e) {
+        console.error("Failed to load SteamUIStore.RunningApps", e);
+      }
+    };
+    loadAppInfo();
+  }, []);
+
+  // When currentApp changes, re-fetch per-app fields only
+  useEffect(() => {
+    if (currentApp?.appid) {
+      refreshAll();
+    }
+  }, [currentApp, refreshAll]);
 
   return (
     <>
@@ -95,27 +194,34 @@ export function Content() {
         <EffectInfo effectKey="mura">
           <PanelSectionRow>
             <ToggleField
-              disabled={!welcomePassed || shaderReady === false || isTogglingEnabled}
+              disabled={
+                !welcomePassed || shaderReady === false || isTogglingEnabled
+              }
               label={Desc.mura.title}
               checked={enabled}
-              onChange={val =>
-                delayToggle("toggle_enabled", val, setEnabled, setIsTogglingEnabled)
+              onChange={(v) =>
+                delayToggle(
+                  "toggle_enabled",
+                  v,
+                  setEnabled,
+                  setIsTogglingEnabled
+                )
               }
             />
           </PanelSectionRow>
         </EffectInfo>
       </PanelSection>
 
-      <PanelSection title="Configuration">
+      <PanelSection title="Mura Configuration">
         <EffectInfo effectKey="monitor">
           <PanelSectionRow>
             <ToggleField
               disabled={!welcomePassed || shaderReady === false}
               label={Desc.monitor.title}
               checked={monitorWatch}
-              onChange={async val => {
-                setMonitorWatch(val);
-                await call<[boolean], void>("toggle_ext_monitor_watcher", val);
+              onChange={async (v) => {
+                setMonitorWatch(v);
+                await call<[boolean], void>("toggle_ext_monitor_watcher", v);
               }}
               icon={<Desc.monitor.icon />}
             />
@@ -125,12 +231,21 @@ export function Content() {
         <EffectInfo effectKey="brightness">
           <PanelSectionRow>
             <ToggleField
-              disabled={!welcomePassed || shaderReady === false || isTogglingBrightness}
+              disabled={
+                !welcomePassed ||
+                shaderReady === false ||
+                isTogglingBrightness
+              }
               label={Desc.brightness.title}
               description={isTogglingBrightness ? Desc.loading.title : ""}
               checked={brightnessEnabled}
-              onChange={val =>
-                delayToggle("toggle_brightness", val, setBrightnessEnabled, setIsTogglingBrightness)
+              onChange={(v) =>
+                delayToggle(
+                  "toggle_brightness",
+                  v,
+                  setBrightnessEnabled,
+                  setIsTogglingBrightness
+                )
               }
               icon={<Desc.brightness.icon />}
             />
@@ -156,10 +271,10 @@ export function Content() {
             <ToggleField
               disabled={!welcomePassed || shaderReady === false || isTogglingGrain}
               label={Desc.grain.title}
-              description={isTogglingGrain ? "Saving to "+displayMode+"..." : ""}
+              description={isTogglingGrain ? `Saving to ${displayMode}...` : ""}
               checked={grain}
-              onChange={val =>
-                delayToggle("toggle_grain", val, setGrain, setIsTogglingGrain)
+              onChange={(v) =>
+                delayToggle("toggle_grain", v, setGrain, setIsTogglingGrain)
               }
               icon={<Desc.grain.icon />}
             />
@@ -171,15 +286,127 @@ export function Content() {
             <ToggleField
               disabled={!welcomePassed || shaderReady === false || isTogglingLGG}
               label={Desc.lgg.title}
-              description={isTogglingLGG ? "Saving to "+displayMode+"..." : ""}
+              description={isTogglingLGG ? `Saving to ${displayMode}...` : ""}
               checked={lgg}
-              onChange={val =>
-                delayToggle("toggle_lgg", val, setLGG, setIsTogglingLGG)
+              onChange={(v) =>
+                delayToggle("toggle_lgg", v, setLGG, setIsTogglingLGG)
               }
               icon={<Desc.lgg.icon />}
             />
           </PanelSectionRow>
         </EffectInfo>
+      </PanelSection>
+
+      <PanelSection title="AMD CAS">
+        <PanelSectionRow>
+          <ToggleField
+            label="Per‑game CAS"
+            checked={perAppSharpness || perAppCas}
+            disabled={!currentApp}
+            onChange={async (v) => {
+              if (!currentApp) return;
+              await Promise.all([
+                call<[number, boolean], void>(
+                  "toggle_sharpness_perapp",
+                  currentApp.appid,
+                  v
+                ),
+                call<[number, boolean], void>(
+                  "toggle_cas_perapp",
+                  currentApp.appid,
+                  v
+                ),
+              ]);
+              refreshAll();
+            }}
+            description={
+              (perAppSharpness || perAppCas) && currentApp ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      color: "rgba(255,255,255,0.6)",
+                    }}
+                  >
+                    {currentApp.icon && (
+                      <img
+                        src={currentApp.icon}
+                        alt=""
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 3,
+                        }}
+                      />
+                    )}
+                    <span>{currentApp.name}</span>
+                  </div>
+                </div>
+              ) : undefined
+            }
+          />
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ToggleField
+            label="Enable AMD CAS"
+            checked={casEnabled}
+            disabled={!currentApp}
+            onChange={async (v) => {
+              if (!currentApp) return;
+              setCasEnabled(v);
+              await call<[boolean, number | null, boolean], void>(
+                "set_cas",
+                v,
+                currentApp.appid,
+                perAppCas
+              );
+            }}
+            description={
+              casEnabled && externalMonitor !== null ? (
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  Current Profile for:{" "}
+                  {externalMonitor ? "External Monitor" : "Internal Display"}
+                </div>
+              ) : undefined
+            }
+          />
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <SliderField
+            label="Sharpness"
+            min={0}
+            max={1}
+            step={0.25}
+            value={sharpness}
+            showValue
+            disabled={!currentApp}
+            onChange={async (v: number) => {
+              if (!currentApp) return;
+              setSharpness(v);
+              await call<[number, number | null, boolean], void>(
+                "set_sharpness",
+                v,
+                currentApp.appid,
+                perAppSharpness
+              );
+            }}
+          />
+        </PanelSectionRow>
       </PanelSection>
     </>
   );
