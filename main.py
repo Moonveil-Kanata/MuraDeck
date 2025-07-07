@@ -77,8 +77,8 @@ BRIGHTNESS_TABLE_HDR10PQ = [
 ]
 
 BRIGHTNESS_TABLE_HDRscRGB = [
-    (40, 0.0125),
-    (0,  0.065),
+    (45, 0.0125),
+    (0,  0.0325),
 ]
 
 
@@ -115,13 +115,10 @@ class Plugin:
         self._grain_enabled = self._grain_enabled_sdr
         self._lgg_enabled = self._lgg_enabled_sdr
 
-        # CAS & Sharpness default by monitor type
         if self._is_external_display:
-            # External monitor → CAS ON, sharpness 0.0
             self._current_cas: bool = settings.getSetting("cas_enabled_global_external", True)
             self._current_sharpness: float = settings.getSetting("sharpness_global_external", 0.0)
         else:
-            # Internal monitor → CAS OFF, sharpness 0.0
             self._current_cas: bool = settings.getSetting("cas_enabled_global_internal", False)
             self._current_sharpness: float = settings.getSetting("sharpness_global_internal", 0.0)
 
@@ -279,6 +276,10 @@ class Plugin:
         if saved_profile:
             decky.logger.info(f"[MuraDeck] Restoring profile '{saved_profile}' for AppID={appid}")
             await self._set_profile(saved_profile)
+            cas = await self.get_cas(appid)
+            sharp = await self.get_sharpness(appid)
+            self._current_cas = cas
+            self._current_sharpness = sharp
             await self._patch_fx(self.current_effect)
             await self._set_effect(self.current_effect)
         else:
@@ -349,7 +350,6 @@ class Plugin:
                 break
             text = line.decode("utf-8", "ignore").rstrip()
 
-            # Only handle HDR color space detection
             m = re_colorspace.search(text)
             if m:
                 cs = m.group(1)
