@@ -1,6 +1,6 @@
 {
   "name": "MuraDeck",
-  "version": "2.0.2b",
+  "version": "2.0.3b",
   "description": "Add mura correction, dithering, and gamma fix to Samsung Panel on Steam Deck OLED.",
   "type": "module",
   "scripts": {
@@ -25,7 +25,7 @@
     "oled",
     "samsung"
   ],
-  "author": "MoonVeil Kanata ~ Renvy R",
+  "author": "Moonveil Kanata - Renvy R",
   "license": "GPL-3.0",
   "bugs": {
     "url": "https://github.com/Moonveil-Kanata/MuraDeck/issues"

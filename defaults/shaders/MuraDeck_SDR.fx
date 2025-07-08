@@ -70,7 +70,7 @@ uniform int GrainFadeNearBright < __UNIFORM_SLIDER_INT1
     ui_min = 0; ui_max = 16;
     ui_label = "Grain Fade Near Bright";
     ui_tooltip = "Higher values give less grain to brighter pixels. Higher = Faster fade.";
-> = 30;
+> = 60;
 uniform float GrainFadeNearBlack < __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.1; ui_max = 8.0;
     ui_label = "Grain Fade Near Black";

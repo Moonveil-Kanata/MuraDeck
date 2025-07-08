@@ -286,6 +286,9 @@ class Plugin:
             decky.logger.info(f"[MuraDeck] No saved profile for AppID={appid}, using current")
         
     async def on_game_state_update(self, appid: int, running: bool):
+        if not self._enabled and not self._use_cas_only:
+            decky.logger.info("[MuraDeck] Plugin is disabled and not in CAS-only mode. Skipping game state update.")
+            return
         # Fix redundant events from frontend
         last_state = self._last_game_state.get(appid)
         if last_state == running:
@@ -438,6 +441,12 @@ class Plugin:
                 if state == "1":
                     self._is_external_display = True
                     await emit("monitor_changed", True)
+                    appid = await self.get_focused_appid()
+                    if appid:
+                        self._current_cas = await self.get_cas(appid)
+                        self._current_sharpness = await self.get_sharpness(appid)
+                        decky.logger.info(f"[Monitor] [External] Refreshed CAS={self._current_cas}, Sharp={self._current_sharpness}")
+
                     if self._monitor_watch_enabled:
                         decky.logger.info("[Monitor] External + Watch ON → CAS-only mode")
                         self._use_cas_only = True
@@ -453,6 +462,14 @@ class Plugin:
                     self._is_external_display = False
                     await emit("monitor_changed", True)
                     self._use_cas_only = False
+
+                    # Re-evaluate CAS and sharpness after monitor switch
+                    appid = await self.get_focused_appid()
+                    if appid:
+                        self._current_cas = await self.get_cas(appid)
+                        self._current_sharpness = await self.get_sharpness(appid)
+                        decky.logger.info(f"[Monitor] [Internal] Refreshed CAS={self._current_cas}, Sharp={self._current_sharpness}")
+
                     if self._monitor_watch_enabled:
                         decky.logger.info("[Monitor] External disconnected → restoring MuraDeck")
                         if self._watch_task is None or self._watch_task.done():
@@ -1031,53 +1048,52 @@ class Plugin:
                     decky.logger.error(f"[MuraDeck] {cmd} FAILED: {err.decode()}")
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
-
-            # Keep install all shaders
-            for fn in MURA_SHADER_FILES:
-                src = os.path.join(PLUGIN_SHADERS_DIR, fn)
-                dst = os.path.join(SHADER_DIR, fn)
-                try:
-                    shutil.copy(src, dst)
-                    os.chmod(dst, 0o644)
-                    decky.logger.info(f"[MuraDeck] Installed shader {fn}")
-                except Exception as e:
-                    decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
                     
-            # Copy from /tmp/mura
+        # Copy from /tmp/mura
+        try:
+            green_tmp = glob.glob(os.path.join("/tmp/mura", "*green.png"))
+            red_tmp = glob.glob(os.path.join("/tmp/mura", "*red.png"))
+            if green_tmp:
+                shutil.copy(green_tmp[0], os.path.join(TEXTURE_DIR, "green.png"))
+                decky.logger.info("[MuraDeck] Copied green.png from /tmp/mura")
+            if red_tmp:
+                shutil.copy(red_tmp[0], os.path.join(TEXTURE_DIR, "red.png"))
+                decky.logger.info("[MuraDeck] Copied red.png from /tmp/mura")
+        except Exception as e:
+            decky.logger.error(f"[MuraDeck] Failed to copy from /tmp/mura: {e}")
+
+        # Copy from ~/.config/gamescope/mura/{id}
+        try:
+            mura_config_dir = os.path.expanduser("~/.config/gamescope/mura")
+            candidate_dirs = glob.glob(os.path.join(mura_config_dir, "*"))
+            found = False
+
+            for candidate in candidate_dirs:
+                green = glob.glob(os.path.join(candidate, "*green.png"))
+                red = glob.glob(os.path.join(candidate, "*red.png"))
+                if green and red:
+                    shutil.copy(green[0], os.path.join(TEXTURE_DIR, "green.png"))
+                    shutil.copy(red[0], os.path.join(TEXTURE_DIR, "red.png"))
+                    decky.logger.info(f"[MuraDeck] Copied green.png from {candidate}")
+                    decky.logger.info(f"[MuraDeck] Copied red.png from {candidate}")
+                    found = True
+                    break
+
+            if not found:
+                decky.logger.warning("[MuraDeck] No valid fallback texture found in ~/.config/gamescope/mura")
+        except Exception as e:
+            decky.logger.error(f"[MuraDeck] Failed to fallback copy from ~/.config/gamescope/mura: {e}")
+
+        # Install all shaders
+        for fn in MURA_SHADER_FILES:
+            src = os.path.join(PLUGIN_SHADERS_DIR, fn)
+            dst = os.path.join(SHADER_DIR, fn)
             try:
-                green_tmp = glob.glob(os.path.join("/tmp/mura", "*green.png"))
-                red_tmp = glob.glob(os.path.join("/tmp/mura", "*red.png"))
-                if green_tmp:
-                    shutil.copy(green_tmp[0], os.path.join(TEXTURE_DIR, "green.png"))
-                    decky.logger.info("[MuraDeck] Copied green.png from /tmp/mura")
-                if red_tmp:
-                    shutil.copy(red_tmp[0], os.path.join(TEXTURE_DIR, "red.png"))
-                    decky.logger.info("[MuraDeck] Copied red.png from /tmp/mura")
+                shutil.copy(src, dst)
+                os.chmod(dst, 0o644)
+                decky.logger.info(f"[MuraDeck] Installed shader {fn}")
             except Exception as e:
-                decky.logger.error(f"[MuraDeck] Failed to copy from /tmp/mura: {e}")
-
-            # Copy from ~/.config/gamescope/mura/{id}
-            try:
-                mura_config_dir = os.path.expanduser("~/.config/gamescope/mura")
-                candidate_dirs = glob.glob(os.path.join(mura_config_dir, "*"))
-                found = False
-
-                for candidate in candidate_dirs:
-                    green = glob.glob(os.path.join(candidate, "*green.png"))
-                    red = glob.glob(os.path.join(candidate, "*red.png"))
-                    if green and red:
-                        shutil.copy(green[0], os.path.join(TEXTURE_DIR, "green.png"))
-                        shutil.copy(red[0], os.path.join(TEXTURE_DIR, "red.png"))
-                        decky.logger.info(f"[MuraDeck] Copied green.png from {candidate}")
-                        decky.logger.info(f"[MuraDeck] Copied red.png from {candidate}")
-                        found = True
-                        break
-
-                if not found:
-                    decky.logger.warning("[MuraDeck] No valid fallback texture found in ~/.config/gamescope/mura")
-            except Exception as e:
-                decky.logger.error(f"[MuraDeck] Failed to fallback copy from ~/.config/gamescope/mura: {e}")
-
+                decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
 
         # Welcome flag
         seen = settings.getSetting("has_seen_welcome", None)

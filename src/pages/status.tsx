@@ -1,7 +1,7 @@
 import {
   ButtonItem
 } from "@decky/ui";
-import { call } from "@decky/api";
+import { call, addEventListener, removeEventListener } from "@decky/api";
 
 import { PlainButton } from "../components/styles/plainButton";
 import { ParallelPanelSection } from "../components/styles/parallelPanelSec";
@@ -19,12 +19,34 @@ export function StatusTab() {
   const [shaderInstalled, setShaderInstalled] = useState<boolean | null>(null);
   const [installing, setInstalling] = useState(false);
 
+  const [externalMonitor, setExternalMonitor] = useState<boolean | null>(null);
+
   useEffect(() => {
     const fetchShaderStatus = async () => {
       const installed = await call<[], boolean>("check_shader_status");
       setShaderInstalled(installed);
     };
+
+    const fetchMonitorStatus = async () => {
+      try {
+        const isExt = await call<[], boolean>("is_external_display");
+        setExternalMonitor(isExt);
+      } catch {
+        setExternalMonitor(null);
+      }
+    };
+
+    const handleMonitorChange = (_: any, isExt: boolean) => {
+      setExternalMonitor(isExt);
+    };
+
     fetchShaderStatus();
+    fetchMonitorStatus();
+
+    addEventListener("monitor_changed", handleMonitorChange);
+    return () => {
+      removeEventListener("monitor_changed", handleMonitorChange);
+    };
   }, []);
 
   const handleReinstall = async () => {
@@ -52,8 +74,19 @@ export function StatusTab() {
           > {installing ? "Installing..." : "Reinstall"}
           </ButtonItem>
         )}
+          <PlainButton
+            label="Current Display"
+            value={
+              externalMonitor === null
+                ? "Detecting..."
+                : externalMonitor
+                ? "External Display"
+                : "Internal Display"
+            }
+            onClick={() => {}}
+          />
         <PlainButton
-          label="Current Display status"
+          label="Current Colorspace"
           value={displayMode || "Detecting..."}
           onClick={() => {}}
         />
@@ -72,7 +105,7 @@ export function StatusTab() {
         />
         <PlainButton
           label="Version"
-          value={PLUGIN_VERSION+" Beta Testflight"}
+          value={PLUGIN_VERSION + " Beta Testflight"}
           onClick={() => {}}
         />
       </ParallelPanelSection>
