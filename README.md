@@ -36,9 +36,14 @@ https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 
 ## 🔴 Known Limitations
 ### FSR/Sharp Issue
-Currently, SteamOS 3.7.8 FSR/Sharp settings is broken if combined with reshade [ValveGamescope#1903](https://github.com/ValveSoftware/gamescope/issues/1903). Consider to set **Scaling Filter** to **LINEAR**.
+Currently, SteamOS 3.7.8 FSR/Sharp settings is broken if combined with reshade [ValveGamescope#1903](https://github.com/ValveSoftware/gamescope/issues/1903). Consider to set **Scaling Filter** to **LINEAR**. And use the built-in MuraDeck AMD CAS for the sharpening
 
 You will be guided through the plugin installation.
+
+### Steam Remote Play
+Built-in remote play from the steamos is broken when using reshade. Consider to use Steam Link or even Moonlight for a very best experience.
+
+If you still want to use built-in steam remote play. You can disable ``Hardware Decoding`` and ``HEVC Video`` on ``Settings → Remote Play``
 
 ### Aspect Ratio
 Shaders are designed to work with landscape 16:xx aspect ratio. Other than 16:xx ratios will causing mura looks worse, since it's designed to stretch to horizontal, and cropped on vertical.
