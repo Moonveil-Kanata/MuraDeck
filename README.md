@@ -66,9 +66,10 @@ In a nutshell, **you can fix it by set your screen hertz between 47hz-66hz and s
 This fix will use combination between **film grain for dithering, lift & gamma (only on near-black pixel)** and your **mura map (only on your bright pixel)**. While **this is not perfect**, atleast it will fix half of the screen issue.
 
 ## Credits
-Shaders & plugin is developed by MoonVeil Kanata ~ RenvyRere.
+Shaders & plugin backend + frontend is developed by MoonVeil Kanata ~ RenvyRere.
 
 ## References
+Big thanks for these shader creator:
 - Film Grain - Christian Cann Schuldt Jensen ~ CeeJay.dk
 - Lift Gamma Gain - 3a and CeeJay.dk
 - AMD CAS with various optimization - martymcmodding
