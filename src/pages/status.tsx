@@ -105,7 +105,7 @@ export function StatusTab() {
         />
         <PlainButton
           label="Version"
-          value={PLUGIN_VERSION + " Beta Testflight"}
+          value={PLUGIN_VERSION + " Stable"}
           onClick={() => {}}
         />
       </ParallelPanelSection>

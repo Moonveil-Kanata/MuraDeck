@@ -210,9 +210,7 @@ export function Content() {
             />
           </PanelSectionRow>
         </EffectInfo>
-      </PanelSection>
 
-      <PanelSection title="Mura Configuration">
         <EffectInfo effectKey="monitor">
           <PanelSectionRow>
             <ToggleField
@@ -223,11 +221,12 @@ export function Content() {
                 setMonitorWatch(v);
                 await call<[boolean], void>("toggle_ext_monitor_watcher", v);
               }}
-              icon={<Desc.monitor.icon />}
             />
           </PanelSectionRow>
         </EffectInfo>
+      </PanelSection>
 
+      <PanelSection title="Mura Settings">
         <EffectInfo effectKey="brightness">
           <PanelSectionRow>
             <ToggleField
@@ -297,7 +296,7 @@ export function Content() {
         </EffectInfo>
       </PanelSection>
 
-      <PanelSection title="AMD CAS">
+      <PanelSection title="AMD Fidelity FX">
         <PanelSectionRow>
           <ToggleField
             label="Per‑game CAS"
@@ -392,6 +391,14 @@ export function Content() {
             min={0}
             max={1}
             step={0.25}
+            notchCount={5}
+            notchLabels={[
+              { notchIndex: 0, label: "Light" },
+              { notchIndex: 1, label: "Fair" },
+              { notchIndex: 2, label: "Med" },
+              { notchIndex: 3, label: "High" },
+              { notchIndex: 4, label: "Firm" },
+            ]}
             value={sharpness}
             showValue
             disabled={!currentApp}

@@ -1,11 +1,19 @@
 {
   "name": "MuraDeck",
-  "author": "MoonVeil Kanata ~ RenvyRere",
+  "author": "Moonveil Kanata - RenvyRere",
   "flags": ["debug", "_root"],
   "api_version": 1,
   "publish": {
-    "tags": ["template", "root"],
-    "description": "Add dithering, mura correction, and gamma fix to Samsung Panel on Steam Deck OLED.",
+    "tags": [
+      "mura",
+      "mura-fix",
+      "mura-correction",
+      "mura-deck",
+      "muradeck",
+      "oled",
+      "samsung"
+    ],
+    "description": "Adaptive mura correction, gamma correction, and dithering to fix mura effect on Samsung Panel for Steam Deck OLED.",
     "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
   }
 }

@@ -63,7 +63,7 @@ export const StatusButton: FC<StatusButtonProps> = ({
               )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", paddingRight: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", paddingRight: "16px", fontSize: "16px" }}>
               {icon}
             </div>
           </Focusable>

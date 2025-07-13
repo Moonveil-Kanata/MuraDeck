@@ -1,5 +1,5 @@
 import { IconType } from "react-icons";
-import { FaTabletAlt, FaFirstdraft, FaFlipboard, FaInfoCircle, FaBarcode, FaCuttlefish } from "react-icons/fa";
+import { FaTabletAlt, FaFirstdraft, FaFlipboard, FaInfoCircle, FaBarcode, FaCuttlefish, FaBraille } from "react-icons/fa";
 
 export type EffectKey = 'mura' | 'monitor' | 'brightness' | 'grain' | 'lgg' | 'aspectfix' | 'cas' | 'cas_slider' | 'loading';
 
@@ -13,11 +13,11 @@ export const Desc: Record<EffectKey, EffectMeta> = {
   mura: {
     title: "Adaptive Mura Correction",
     desc: "Preserve black pixel, automatic HDR/SDR detection, and adaptive brightness correction.",
-    icon: FaInfoCircle,
+    icon: FaBraille,
   },
   monitor: {
     title: "Respect External Monitor",
-    desc: "Automatic turn the plugin on/off, when external monitor detected. Disable it if you want to fully deactivate the plugin",
+    desc: "Automatically turn the plugin on/off, when external monitor detected. Disable it if you want to fully deactivate the plugin",
     icon: FaTabletAlt,
   },
   brightness: {
