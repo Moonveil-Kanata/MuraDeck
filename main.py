@@ -78,7 +78,8 @@ BRIGHTNESS_TABLE_HDR10PQ = [
 
 BRIGHTNESS_TABLE_HDRscRGB = [
     (45, 0.0125),
-    (0,  0.0325),
+    (40, 0.0150),
+    (0,  0.0175),
 ]
 
 
@@ -740,9 +741,9 @@ class Plugin:
         is_hdrscrgb = (fx_name == FX_HDRscRGB)
         
         if is_hdrscrgb:
-            grain_value = 3.0 if self._grain_enabled else 0.0
-            lgg_lift_value = 0.99995 if self._lgg_enabled else 1.0
-            lgg_gamma_value = 1.0
+            grain_value = 0.1 if self._grain_enabled else 0.0
+            lgg_lift_value = 0.99992 if self._lgg_enabled else 1.0
+            lgg_gamma_value = 0.75 if self._lgg_enabled else 1.0
         elif is_sdr:
             grain_value = 0.01 if self._grain_enabled else 0.0
             lgg_lift_value = 0.95 if self._lgg_enabled else 1.0
