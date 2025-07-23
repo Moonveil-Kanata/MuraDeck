@@ -16,6 +16,8 @@ import { DisplayMode } from "../hooks/displayMode";
 import { Desc } from "./defines/descriptor";
 
 export function Content() {
+  const [panelIsNotSDC, setPanelIsNotSDC] = useState(false);
+
   const [welcomePassed, setWelcomePassed] = useState(false);
   const [enabled, setEnabled] = useState(true);
   const [brightnessEnabled, setBrightnessEnabled] = useState(true);
@@ -85,6 +87,14 @@ export function Content() {
       setWelcomePassed(seen);
       setShaderReady(ok);
     } catch { }
+
+    // SDC Detection
+    try {
+      const isNotSDC = await call<[], boolean>("get_panel_sdc_status");
+      setPanelIsNotSDC(isNotSDC);
+    } catch {
+      setPanelIsNotSDC(false);
+    }
 
     // grain & LGG
     if (displayMode !== null) {
@@ -254,11 +264,13 @@ export function Content() {
         <StatusButton
           label="Status"
           description={
-            shaderReady === false
-              ? "Reinstalling required!"
-              : displayMode
-                ? `Current Profile: ${displayMode}`
-                : Desc.loading.desc
+            panelIsNotSDC
+              ? "Current panel isn't SDC - You can uninstall the plugin"
+              : shaderReady === false
+                ? "Reinstalling required!"
+                : displayMode
+                  ? `Current Profile: ${displayMode}`
+                  : Desc.loading.desc
           }
           icon={<FaInfoCircle />}
           route={STATUS_ROUTE}

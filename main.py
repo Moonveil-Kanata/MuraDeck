@@ -85,6 +85,8 @@ BRIGHTNESS_TABLE_HDRscRGB = [
 
 class Plugin:
     def __init__(self):
+        self._panel_not_sdc = False
+        
         self.profile = "SDR"
         self.current_effect = FX_SDR
         self.current_appid: str | None = None
@@ -1047,6 +1049,14 @@ class Plugin:
                     decky.logger.info(f"[MuraDeck] {cmd} OK")
                 else:
                     decky.logger.error(f"[MuraDeck] {cmd} FAILED: {err.decode()}")
+
+                # If not SDC / BOE Detected
+                if cmd == "galileo-mura-extractor":
+                    stdout_str = out.decode().lower()
+                    if "not using mura correction" in stdout_str and "not sdc" in stdout_str:
+                        self._panel_not_sdc = True
+                        decky.logger.warning("[MuraDeck] Panel is NOT SDC")
+
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
                     
