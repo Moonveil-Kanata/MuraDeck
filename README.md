@@ -50,6 +50,20 @@ Shaders are designed to work with landscape 16:xx aspect ratio. Other than 16:xx
 
 During development, it was tested using `xwininfo` to get current window resolution. The difficulty starts, when trying to achieve the timing to trigger the ``xwininfo``.
 
+## 🟤 FAQ
+
+### Why plugin keep detecting SDR on HDR game?
+It's "intentionally" not just to detect every HDR.
+HDR have difference color profiles which needs a fine-tuned shader per-color profiles.
+
+If using a wrong shader on wrong HDR color profiles, it will results even worst mura effect.
+
+So, The plugin is developed and tested with Steam Game with SDR, HDR10PQ, and HDRscRGB color profiles.
+
+Also, Developer tested on non-steam games via Bottles flatpak using gamescope flatpak with Star Wars JEDI: The Fallen Order, and it's works.
+
+If you've request to add HDR detection ability to certain games, you can add an issue to this repo.
+
 ## 🟪 Contributions
 Dev, open for any contributions, including:
 - If some of you able to tackle those [limitation](#-known-limitations),
