@@ -44,13 +44,13 @@ uniform float3 RGB_Lift < __UNIFORM_SLIDER_FLOAT3
 	ui_min = 0.0; ui_max = 2.0;
 	ui_label = "RGB Lift";
 	ui_tooltip = "Adjust shadows.";
-> = 0.99995;
+> = 0.99992;
 
 uniform float3 RGB_Gamma < __UNIFORM_SLIDER_FLOAT3
 	ui_min = 0.1; ui_max = 3.0;
 	ui_label = "RGB Gamma";
 	ui_tooltip = "Adjust midtones.";
-> = 1.0;
+> = 0.75;
 
 uniform float3 RGB_Gain <
     __UNIFORM_SLIDER_FLOAT3
@@ -59,13 +59,20 @@ uniform float3 RGB_Gain <
     ui_tooltip = "Adjust highlights.";
 > = 1.0;
 
+uniform float LGGAggressiveness <
+    __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 1.0;
+    ui_label = "LGG Aggressiveness";
+    ui_tooltip = "Controls how much Lift, Gamma, and Gain affect luminance range. 0 = shadows only, 1 = full image.";
+> = 0.00075;
+
 
 // Grain
 uniform float Intensity < __UNIFORM_SLIDER_FLOAT1
 	ui_min = 0.0; ui_max = 1.0;
 	ui_label = "Grain Intensity";
 	ui_tooltip = "How visible the grain is.";
-> = 3.0;
+> = 0.1;
 
 uniform float Variance <
     __UNIFORM_SLIDER_FLOAT1
@@ -114,14 +121,28 @@ uniform float MuraFadeNearBlack <
     ui_min = 0.0; ui_max = 20.0;
     ui_label = "Mura Fade Near Black";
     ui_tooltip = "Higher values give less mura to dark pixels. Higher = Faster fade.";
-> = 0.01;
+> = 2.75;
+
+uniform float MuraFadeBlackSharpness <
+    __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.1; ui_max = 32.0;
+    ui_label = "Mura Fade Near Black Sharpness";
+    ui_tooltip = "Higher = faster fade from black.";
+> = 325;
+
+uniform float MuraFadeBlackOffset <
+    __UNIFORM_SLIDER_FLOAT1
+    ui_min = 0.0; ui_max = 1.0;
+    ui_label = "Mura Fade Near Black Offset";
+    ui_tooltip = "Offset of fade threshold. Push left or right to shift fade zone.";
+> = 0.0;
 
 uniform float MuraBlackCutoff <
     __UNIFORM_SLIDER_FLOAT1
     ui_min = 0.0; ui_max = 0.1;
     ui_label = "Mura Black Cutoff";
     ui_tooltip = "Below this luma level, Mura correction is completely disabled.";
-> = 0.002;
+> = 0.00093;
 
 uniform float MuraMapScale < __UNIFORM_SLIDER_FLOAT1
 	ui_min = 0.0; ui_max = 5;
@@ -178,7 +199,7 @@ float3 ApplyCAS(float2 texcoord)
     float3 window = b + d + f + h;
     float3 outColor = (window * wRGB + e) * rcpWeightRGB;
 
-    return outColor; // No saturate(), keep linear HDR values
+    return outColor;
 }
 
 float3 MuraDeck(float4 vpos : SV_Position, float2 texcoord : TexCoord) : SV_Target
@@ -219,15 +240,28 @@ float3 MuraDeck(float4 vpos : SV_Position, float2 texcoord : TexCoord) : SV_Targ
         color += (gauss_noise1 - 0.5) * fade_intensity;
     }
 
-    // LGG + PRE-CONTRAST
+    // Aggresiveness
     float3 pre_contrasted = max((color - 0.5) * LGGPreContrast + 0.5, 0.0);
-    float3 lgg = pre_contrasted * (1.5 - 0.5 * RGB_Lift) + 0.5 * RGB_Lift - 0.5;
-    lgg *= RGB_Gain;
-    lgg = max(lgg, 0.0);
-    lgg = pow(lgg, 1.0 / RGB_Gamma);
-    color = lgg;
 
-    // MURA CORRECTION
+    float luma_lgg = dot(pre_contrasted, float3(0.2126, 0.7152, 0.0722));
+    float weight = clamp(1.0 - luma_lgg / max(LGGAggressiveness, 1e-5), 0.0, 1.0);
+
+    // Lift
+    float3 lifted = pre_contrasted * (1.5 - 0.5 * RGB_Lift) + 0.5 * RGB_Lift - 0.5;
+    pre_contrasted = lerp(pre_contrasted, lifted, weight);
+
+    // Gain
+    float3 gained = pre_contrasted * RGB_Gain;
+    pre_contrasted = lerp(pre_contrasted, gained, weight);
+
+    // Gamma
+    float3 safeColor = max(pre_contrasted, 1e-5);
+    float3 gammaCorrected = pow(safeColor, 1.0 / RGB_Gamma);
+    pre_contrasted = lerp(pre_contrasted, gammaCorrected, weight);
+
+    color = pre_contrasted;
+
+    // --- MURA CORRECTION ---
     if (luma > MuraBlackCutoff)
     {
         const float target_aspect = 1280.0 / 800.0;
@@ -252,7 +286,8 @@ float3 MuraDeck(float4 vpos : SV_Position, float2 texcoord : TexCoord) : SV_Targ
         mura_correction.r += (red.r - 0.5) * MuraMapScale;
         mura_correction.g += (green.g - 0.5) * MuraMapScale;
 
-        float fade_dark = pow(saturate(luma), MuraFadeNearBlack);
+        float fade_dark = saturate((luma - MuraFadeBlackOffset) * MuraFadeBlackSharpness);
+        fade_dark = pow(fade_dark, MuraFadeNearBlack);
         float fade_bright = pow(1.0 - saturate(luma), MuraFadeNearBright);
         float mura_blend = fade_dark * fade_bright;
 
