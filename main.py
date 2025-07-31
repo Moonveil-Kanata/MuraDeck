@@ -978,6 +978,9 @@ class Plugin:
         settings.setSetting("has_seen_welcome", seen)
         settings.commit()
 
+    async def get_panel_sdc_status(self) -> bool:
+        return not self._panel_not_sdc
+
     async def _unload(self):
         decky.logger.info("[MuraDeck] Unloading...")
 
