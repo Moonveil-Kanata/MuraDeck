@@ -367,11 +367,13 @@ class Plugin:
     async def get_focused_appid(self):
         try:
             cmd = 'export DISPLAY=:0 && xprop -root GAMESCOPE_FOCUSED_APP'
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = ""
             proc = await asyncio.create_subprocess_shell(
                 cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=os.environ
+                env=env
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode == 0:
@@ -392,11 +394,13 @@ class Plugin:
     async def check_gamescope_hdr(self) -> bool:
         try:
             cmd = 'export DISPLAY=:0 && xprop -root GAMESCOPE_COLOR_APP_WANTS_HDR_FEEDBACK'
+            env = os.environ.copy()
+            env["LD_LIBRARY_PATH"] = ""
             proc = await asyncio.create_subprocess_shell(
                 cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=os.environ
+                env=env
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode == 0:
@@ -893,11 +897,13 @@ class Plugin:
             'xprop -root -f GAMESCOPE_RESHADE_EFFECT 8u '
             '-set GAMESCOPE_RESHADE_EFFECT None'
         )
+        env = os.environ.copy()
+        env["LD_LIBRARY_PATH"] = ""
         proc = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=os.environ,
+            env=env,
         )
         _, err = await proc.communicate()
         if proc.returncode == 0:
@@ -913,11 +919,13 @@ class Plugin:
             f'xprop -root -f GAMESCOPE_RESHADE_EFFECT 8u '
             f'-set GAMESCOPE_RESHADE_EFFECT {effect_name}'
         )
+        env = os.environ.copy()
+        env["LD_LIBRARY_PATH"] = ""
         proc = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=os.environ,
+            env=env,
         )
         _, err = await proc.communicate()
         if proc.returncode == 0:
@@ -938,11 +946,13 @@ class Plugin:
             f'xprop -root -f GAMESCOPE_RESHADE_EFFECT 8u '
             f'-set GAMESCOPE_RESHADE_EFFECT {effect_name}'
         )
+        env = os.environ.copy()
+        env["LD_LIBRARY_PATH"] = ""
         proc = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=os.environ,
+            env=env,
         )
         _, err = await proc.communicate()
         if proc.returncode == 0:
@@ -1018,14 +1028,14 @@ class Plugin:
     async def _migration(self):
         decky.logger.info("[MuraDeck] Migration step")
 
-        ena = settings.getSetting("enabled", None)
-        if ena is None:
+        active = settings.getSetting("enabled", None)
+        if active is None:
             decky.logger.info("[MuraDeck] First-time: disabling plugin")
             settings.setSetting("enabled", False)
             settings.commit()
             self._enabled = False
         else:
-            self._enabled = ena
+            self._enabled = active
 
         os.makedirs(SHADER_DIR, exist_ok=True)
         os.makedirs(TEXTURE_DIR, exist_ok=True)
@@ -1036,6 +1046,7 @@ class Plugin:
             try:
                 env = os.environ.copy()
                 env["DISPLAY"] = ":0"
+                env["LD_LIBRARY_PATH"] = ""
                 proc = await asyncio.create_subprocess_exec(
                     cmd,
                     stdout=asyncio.subprocess.PIPE,

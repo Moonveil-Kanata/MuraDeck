@@ -1,5 +1,5 @@
 import { IconType } from "react-icons";
-import { FaTabletAlt, FaFirstdraft, FaFlipboard, FaInfoCircle, FaBarcode, FaCuttlefish, FaBraille } from "react-icons/fa";
+import { FaTabletAlt, FaFirstdraft, FaFlipboard, FaBarcode, FaCuttlefish, FaBraille } from "react-icons/fa";
 
 export type EffectKey = 'mura' | 'monitor' | 'brightness' | 'grain' | 'lgg' | 'aspectfix' | 'cas' | 'cas_slider' | 'loading';
 

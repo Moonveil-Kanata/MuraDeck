@@ -132,7 +132,7 @@ export function Content() {
       setExternalMonitor(isExt);
       refreshAll();
     };
-    const onAppProf = (_: any, appid: number, perApp: boolean) => {
+    const onAppProf = () => {
       refreshAll();
     };
 
