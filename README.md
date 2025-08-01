@@ -28,8 +28,7 @@ https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
 ![MuraDeck](./assets/Markdown/Ground%20Truth.png)
 
 ## 🟢 Usage
-- Download from [Release](https://github.com/Moonveil-Kanata/MuraDeck/releases/), save it to any folder on Steam Deck
-- Do a manual Decky Loader installation
+- Install via ``Testing Channel``
 - You will be guided to what you need to do before start using the plugin
 - Finally, Activate ``Adaptive Mura Correction`` toggle
 - Done
