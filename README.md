@@ -30,7 +30,7 @@ Feel free to report a bug, if some of these core functionality not working.
 More test
 https://www.reddit.com/r/SteamDeck/comments/1lmemki/actual_mura_fix_plugin_for_your_steam_deck_oled/
 
-https://github.com/user-attachments/assets/254a30c3-f0c4-4e98-b25e-6407b6a3cd0f
+https://github.com/user-attachments/assets/465306c2-371d-48fd-a45a-db36dd4c630d
 
 ![MuraDeck](./assets/Markdown/Ground%20Truth.png)
 
