@@ -35,7 +35,7 @@ https://github.com/user-attachments/assets/465306c2-371d-48fd-a45a-db36dd4c630d
 ![MuraDeck](./assets/Markdown/Ground%20Truth.png)
 
 ## 🟢 Usage
-- Install via ``Testing Channel``
+- Install via ``Decky Store``
 - You will be guided to what you need to do before start using the plugin
 - Finally, Activate ``Adaptive Mura Correction`` toggle
 - Done
