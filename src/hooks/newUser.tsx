@@ -1,5 +1,7 @@
 import { callable } from "@decky/api";
-import { Navigation } from "decky-frontend-lib";
+import {
+  Navigation
+} from "@decky/ui";
 
 const getHasSeenWelcome = callable<[], boolean>("get_has_seen_welcome");
 const setHasSeenWelcome = callable<[boolean], void>("set_has_seen_welcome");

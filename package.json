@@ -1,7 +1,7 @@
 {
   "name": "MuraDeck",
-  "version": "2.1.3",
-  "description": "Adaptive mura correction, gamma correction, and dithering to fix mura effect on Samsung Panel for Steam Deck OLED.",
+  "version": "2.1.4",
+  "description": "Adaptive mura correction, gamma correction, and dithering to fix mura effect ONLY FOR defective Samsung Panel for Steam Deck OLED.",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
@@ -33,7 +33,7 @@
   "homepage": "https://github.com/Moonveil-Kanata/MuraDeck#readme",
   "devDependencies": {
     "@decky/rollup": "^1.0.1",
-    "@decky/ui": "^4.10.4",
+    "@decky/ui": "^4.11.0",
     "@rollup/plugin-replace": "^6.0.2",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",

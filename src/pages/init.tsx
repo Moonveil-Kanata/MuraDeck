@@ -23,6 +23,18 @@ export function InfoTab() {
     <>
       <ParallelPanelSection title="Welcome to Mura Deck">
         <div style={{ display: "flex", gap: "8px" }}>
+          <FaExclamationCircle style={{ paddingTop: "4px", color: "#ffe869ff"}} />
+          <span>
+            <b>CAUTION! MAKE SURE TO FOLLOW ALL THIS STEP</b>
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <FaExclamationCircle style={{ paddingTop: "4px", color: "#ff7a7aff" }} />
+          <span>
+            <b>If your device is refurbished, unfortunately it won't work.</b>
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
           <FaExclamationCircle style={{ paddingTop: "4px" }} />
           <span>
             Make sure you're on <b>SteamOS 3.7.8</b> or above.
@@ -37,7 +49,7 @@ export function InfoTab() {
         <div style={{ display: "flex", gap: "8px" }}>
           <FaExclamationCircle style={{ paddingTop: "4px" }} />
           <span>
-            And, make sure <b>Scaling Filter</b> isn't <b>Sharp</b>
+            And, make sure <b>Scaling Filter</b> isn't <b>Sharp</b> or <b>Pixel</b>
           </span>
         </div>
       </ParallelPanelSection>

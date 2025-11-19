@@ -2,11 +2,12 @@ import { Focusable } from "@decky/ui";
 
 interface PlainButtonProps {
   label: string;
+  description?: string;
   value: string;
   onClick?: () => void;
 }
 
-export function PlainButton({ label, value, onClick }: PlainButtonProps) {
+export function PlainButton({ label, description, value, onClick }: PlainButtonProps) {
   return (
     <Focusable
       style={{
@@ -19,7 +20,15 @@ export function PlainButton({ label, value, onClick }: PlainButtonProps) {
       }}
       onActivate={onClick}
     >
-      <span>{label}</span>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <span>{label}</span>
+        {description && (
+          <span style={{ opacity: 0.6, fontSize: "13px", marginTop: "3px", paddingRight: "20px" }}>
+            {description}
+          </span>
+        )}
+      </div>
+
       <span style={{ opacity: 0.7 }}>{value}</span>
     </Focusable>
   );

@@ -9,7 +9,7 @@ In a nutshell, **you can fix it by set your screen hertz between 47hz-66hz and s
 
 This fix will use combination between **film grain for dithering, lift & gamma (only on near-black pixel)** and your **mura map (only on your bright pixel)**. While **this is not perfect**, atleast it will fix half of the screen issue.
 
-![MuraDeck](./assets/Markdown/IMG_7425.JPG)
+![MuraDeck](./assets/Markdown/Cover.JPG)
 
 ## 🔵 Functionality
 Install it and forget it. Everything is created, to automagically doing everything in the background for you:

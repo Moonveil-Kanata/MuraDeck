@@ -13,7 +13,7 @@
       "oled",
       "samsung"
     ],
-    "description": "Adaptive mura correction, gamma correction, and dithering to fix mura effect on Samsung Panel for Steam Deck OLED.",
+    "description": "Adaptive mura correction, gamma correction, and dithering to fix mura effect ONLY FOR defective Samsung Panel for Steam Deck OLED.",
     "image": "https://raw.githubusercontent.com/Moonveil-Kanata/MuraDeck/refs/heads/main/assets/Markdown/IMG_7425.JPG"
   }
 }

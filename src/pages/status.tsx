@@ -1,5 +1,7 @@
 import {
-  ButtonItem
+  ButtonItem,
+  PanelSectionRow,
+  
 } from "@decky/ui";
 import { call, addEventListener, removeEventListener } from "@decky/api";
 
@@ -7,6 +9,8 @@ import { PlainButton } from "../components/styles/plainButton";
 import { ParallelPanelSection } from "../components/styles/parallelPanelSec";
 import { DisplayMode } from "../hooks/displayMode";
 import { useState, useEffect } from "react";
+
+import { FaExclamationCircle } from "react-icons/fa";
 
 import {
   PLUGIN_NAME,
@@ -64,7 +68,7 @@ export function StatusTab() {
         <PlainButton
           label="Shader"
           value={shaderInstalled === null ? "Checking..." : shaderInstalled ? "Installed" : "Missing!"}
-          onClick={() => {}}
+          onClick={() => { }}
         />
         {shaderInstalled === false && (
           <ButtonItem
@@ -74,21 +78,22 @@ export function StatusTab() {
           > {installing ? "Installing..." : "Reinstall"}
           </ButtonItem>
         )}
-          <PlainButton
-            label="Current Display"
-            value={
-              externalMonitor === null
-                ? "Detecting..."
-                : externalMonitor
+        <PlainButton
+          label="Current Display"
+          value={
+            externalMonitor === null
+              ? "Detecting..."
+              : externalMonitor
                 ? "External Display"
                 : "Internal Display"
-            }
-            onClick={() => {}}
-          />
+          }
+          onClick={() => { }}
+        />
         <PlainButton
           label="Current Colorspace"
+          description="HDR Detection only for HDRscRGB and HDR10PQ, other than that it won't work as it needs special treatment for mura correction on every difference color profiles"
           value={displayMode || "Detecting..."}
-          onClick={() => {}}
+          onClick={() => { }}
         />
       </ParallelPanelSection>
 
@@ -96,17 +101,17 @@ export function StatusTab() {
         <PlainButton
           label="Plugin Codename"
           value={PLUGIN_NAME}
-          onClick={() => {}}
+          onClick={() => { }}
         />
         <PlainButton
           label="Developer"
           value={PLUGIN_AUTHOR}
-          onClick={() => {}}
+          onClick={() => { }}
         />
         <PlainButton
           label="Version"
           value={PLUGIN_VERSION + " Stable"}
-          onClick={() => {}}
+          onClick={() => { }}
         />
       </ParallelPanelSection>
     </>
