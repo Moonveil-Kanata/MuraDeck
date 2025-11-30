@@ -23,37 +23,31 @@ export function InfoTab() {
     <>
       <ParallelPanelSection title="Welcome to Mura Deck">
         <div style={{ display: "flex", gap: "8px" }}>
-          <FaExclamationCircle style={{ paddingTop: "4px", color: "#ffe869ff"}} />
+          <FaExclamationCircle style={{ paddingTop: "4px", color: "#ffef8aff" }} />
           <span>
-            <b>CAUTION! MAKE SURE TO FOLLOW ALL THIS STEP</b>
+            If your device is <b>refurbished</b>, unfortunately it won't work
           </span>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <FaExclamationCircle style={{ paddingTop: "4px", color: "#ff7a7aff" }} />
+          <FaExclamationCircle style={{ paddingTop: "4px", color: "#ffef8aff" }} />
           <span>
-            <b>If your device is refurbished, unfortunately it won't work.</b>
-          </span>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <FaExclamationCircle style={{ paddingTop: "4px" }} />
-          <span>
-            Make sure you're on <b>SteamOS 3.7.8</b> or above.
-          </span>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <FaExclamationCircle style={{ paddingTop: "4px" }} />
-          <span>
-            <b>Disable mura compensation</b> before using this plugin.
-          </span>
-        </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <FaExclamationCircle style={{ paddingTop: "4px" }} />
-          <span>
-            And, make sure <b>Scaling Filter</b> isn't <b>Sharp</b> or <b>Pixel</b>
+            Internet connection required
           </span>
         </div>
       </ParallelPanelSection>
       <ParallelPanelSection title="Initialization">
+        <div style={{ display: "flex", gap: "8px" }}>
+          <FaExclamationCircle style={{ paddingTop: "4px", color: "#a8beffff" }} />
+          <span>
+            <b>Disable mura compensation</b> before using this plugin
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <FaExclamationCircle style={{ paddingTop: "4px", color: "#a8beffff" }} />
+          <span>
+            And, make sure <b>Scaling Filter</b> isn't <b>Sharp</b> or <b>Pixel</b>
+          </span>
+        </div>
         <ButtonItem label="Enable Developer Mode" layout="inline" onClick={() => { Navigation.Navigate("/settings/system") }}>
           Settings
         </ButtonItem>

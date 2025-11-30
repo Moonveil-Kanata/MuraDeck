@@ -1,16 +1,10 @@
-import {
-  ButtonItem,
-  PanelSectionRow,
-  
-} from "@decky/ui";
+import {ButtonItem} from "@decky/ui";
 import { call, addEventListener, removeEventListener } from "@decky/api";
 
 import { PlainButton } from "../components/styles/plainButton";
 import { ParallelPanelSection } from "../components/styles/parallelPanelSec";
 import { DisplayMode } from "../hooks/displayMode";
 import { useState, useEffect } from "react";
-
-import { FaExclamationCircle } from "react-icons/fa";
 
 import {
   PLUGIN_NAME,
@@ -68,7 +62,8 @@ export function StatusTab() {
         <PlainButton
           label="Shader"
           value={shaderInstalled === null ? "Checking..." : shaderInstalled ? "Installed" : "Missing!"}
-          onClick={() => { }}
+          modalTitle="Mura Correction Shaders"
+          modalDesc="Shaders and mura texture are extracted into /home/deck/.local/share/gamescope/reshade"
         />
         {shaderInstalled === false && (
           <ButtonItem
@@ -91,9 +86,10 @@ export function StatusTab() {
         />
         <PlainButton
           label="Current Colorspace"
-          description="HDR Detection only for HDRscRGB and HDR10PQ, other than that it won't work as it needs special treatment for mura correction on every difference color profiles"
           value={displayMode || "Detecting..."}
-          onClick={() => { }}
+          modalTitle="HDR Detection Compability"
+          modalDesc="Current supported HDR detection is HDRscRGB and HDR10PQ. These colorspaces are used by most Steam games"
+          description="Only limited HDR colorspace were supported - Click for more info"
         />
       </ParallelPanelSection>
 
@@ -101,7 +97,8 @@ export function StatusTab() {
         <PlainButton
           label="Plugin Codename"
           value={PLUGIN_NAME}
-          onClick={() => { }}
+          modalTitle="Plugin Repo"
+          modalDesc="For more info https://github.com/Moonveil-Kanata/MuraDeck"
         />
         <PlainButton
           label="Developer"
