@@ -39,11 +39,6 @@ MURA_TEXTURE_FILES = [
 
 STEAM_ICON_PATH = os.path.expanduser("~/.steam/steam/appcache/librarycache")
 
-LOG_DIR = os.path.expanduser("~/.steam/steam/logs")
-LOG_LINUX = os.path.join(LOG_DIR, "console-linux.txt")
-LOG_GAMEPROC = os.path.join(LOG_DIR, "gameprocess_log.txt")
-LOG_DISPLAYMGR = os.path.join(LOG_DIR, "systemdisplaymanager.txt")
-
 FX_DIR = os.path.expanduser("~/.local/share/gamescope/reshade/Shaders")
 FX_CAS = "CAS.fx"
 FX_SDR = "MuraDeck_SDR.fx"
@@ -132,7 +127,7 @@ class Plugin:
                 self._ext_monitor_watcher()
             )
         if self._enabled:
-            self._watch_task = asyncio.create_task(self._log_watcher())
+            self._watch_task = asyncio.create_task(self._profile_watcher())
 
     async def toggle_enabled(self, enable: bool):
         decky.logger.info(
@@ -147,7 +142,7 @@ class Plugin:
             self.last_fade_near = None
 
             if self._watch_task is None or self._watch_task.done():
-                self._watch_task = asyncio.create_task(self._log_watcher())
+                self._watch_task = asyncio.create_task(self._profile_watcher())
             await self._apply_current_profile()
         else:
             if self._watch_task and not self._watch_task.done():
@@ -290,7 +285,6 @@ class Plugin:
         if not self._enabled and not self._use_cas_only:
             decky.logger.info("[MuraDeck] Plugin is disabled and not in CAS-only mode. Skipping game state update.")
             return
-        # Fix redundant events from frontend
         last_state = self._last_game_state.get(appid)
         if last_state == running:
             return
@@ -332,37 +326,100 @@ class Plugin:
             await self._patch_fx(self.current_effect)
             await self._set_effect(self.current_effect)
 
-    async def _log_watcher(self):
-        for p in (LOG_LINUX, LOG_GAMEPROC):
-            if not os.path.exists(p):
-                decky.logger.warning(f"[MuraDeck] Log not found: {p}")
+    async def _profile_watcher(self):
+        decky.logger.info("[MuraDeck] Starting journal watcher...")
 
-        proc = await asyncio.create_subprocess_exec(
-            "tail", "-F", LOG_LINUX, LOG_GAMEPROC,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        env = os.environ.copy()
+        env.pop("LD_PRELOAD", None)
+        env.pop("LD_LIBRARY_PATH", None)
+        env.pop("LD_LIBRARY_PATH_ORIG", None)
+
+        re_hdr10 = re.compile(
+            r"HDR10_ST2084|mode=hdr10-pq",
+            re.IGNORECASE,
         )
-        assert proc.stdout
-
-        re_colorspace = re.compile(
-            r"colorspace:.*(HDR10_ST2084|SRGB_NONLINEAR|SRGB_LINEAR)"
+        re_scrgb = re.compile(
+            r"SRGB_LINEAR|mode=linear-scrgb|model_space=linear-scrgb",
+            re.IGNORECASE,
+        )
+        re_sdr = re.compile(
+            r"SRGB_NONLINEAR|mode=sdr-8-bit",
+            re.IGNORECASE,
         )
 
-        while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            text = line.decode("utf-8", "ignore").rstrip()
+        proc = None
 
-            m = re_colorspace.search(text)
-            if m:
-                cs = m.group(1)
-                if cs == "HDR10_ST2084":
-                    await self._set_profile("HDR10PQ")
-                elif cs == "SRGB_LINEAR":
-                    await self._set_profile("HDRscRGB")
-                else:
-                    await self._set_profile("SDR")
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "/usr/bin/journalctl",
+                "--user",
+                "--follow",
+                "--lines=0",
+                "--output=cat",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+                env=env,
+            )
+
+            decky.logger.info(
+                f"[MuraDeck] journalctl started (PID: {proc.pid})"
+            )
+
+            assert proc.stdout is not None
+            current_profile = None
+
+            while True:
+                line = await proc.stdout.readline()
+
+                if not line:
+                    code = await proc.wait()
+                    decky.logger.error(
+                        f"[MuraDeck] journalctl exited (code: {code})"
+                    )
+                    break
+
+                text = line.decode("utf-8", "ignore").strip()
+
+                if "[MuraDeck] Journal event:" in text:
+                    continue
+
+                profile = None
+
+                if re_hdr10.search(text):
+                    profile = "HDR10PQ"
+                elif re_scrgb.search(text):
+                    profile = "HDRscRGB"
+                elif re_sdr.search(text):
+                    profile = "SDR"
+
+                if profile is None or profile == current_profile:
+                    continue
+
+                decky.logger.info(
+                    f"[MuraDeck] Colourspace event detected: "
+                    f"{profile} | {text[:300]}"
+                )
+
+                try:
+                    await self._set_profile(profile)
+                    current_profile = profile
+                    decky.logger.info(
+                        f"[MuraDeck] Profile applied: {profile}"
+                    )
+                except Exception:
+                    decky.logger.exception(
+                        f"[MuraDeck] Failed to apply profile: {profile}"
+                    )
+
+        except asyncio.CancelledError:
+            decky.logger.info("[MuraDeck] Watcher cancelled")
+            raise
+        except Exception:
+            decky.logger.exception("[MuraDeck] Watcher failed")
+        finally:
+            if proc is not None and proc.returncode is None:
+                proc.terminate()
+                await proc.wait()
 
     async def get_focused_appid(self):
         try:
@@ -419,72 +476,167 @@ class Plugin:
         return False
 
     async def _ext_monitor_watcher(self):
-        if not os.path.exists(LOG_DISPLAYMGR):
-            decky.logger.warning(
-                "[MuraDeck] Log not found, failed to watch external monitor"
-            )
-            return
-        decky.logger.info("[MuraDeck] Starting external monitor watcher...")
-        proc = await asyncio.create_subprocess_exec(
-            "tail", "-Fn0", LOG_DISPLAYMGR, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        decky.logger.info(
+            "[MuraDeck] Starting external monitor journal watcher..."
         )
-        assert proc.stdout is not None
-        pattern = re.compile(r"OnScreenChanged:\s+gamescope event external: (\d)")
 
-        while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            decoded = line.decode("utf-8").strip()
-            match = pattern.search(decoded)
-            if match:
-                state = match.group(1)
-                decky.logger.info(f"[Monitor Watcher] External = {state}")
+        env = os.environ.copy()
+        env.pop("LD_PRELOAD", None)
+        env.pop("LD_LIBRARY_PATH", None)
+        env.pop("LD_LIBRARY_PATH_ORIG", None)
 
-                # Call focused appid
-                await self.on_focus_change()
-                if state == "1":
-                    self._is_external_display = True
-                    await emit("monitor_changed", True)
-                    appid = await self.get_focused_appid()
-                    if appid:
-                        self._current_cas = await self.get_cas(appid)
-                        self._current_sharpness = await self.get_sharpness(appid)
-                        decky.logger.info(f"[Monitor] [External] Refreshed CAS={self._current_cas}, Sharp={self._current_sharpness}")
+        re_connector = re.compile(
+            r"selecting connector\s+([A-Za-z0-9._-]+)",
+            re.IGNORECASE,
+        )
+        re_display = re.compile(
+            r"Connector\s+([A-Za-z0-9._-]+)\s*->\s*(.+)",
+            re.IGNORECASE,
+        )
 
-                    if self._monitor_watch_enabled:
-                        decky.logger.info("[Monitor] External + Watch ON → CAS-only mode")
-                        self._use_cas_only = True
-                        if self._watch_task is None or self._watch_task.done():
-                            self._watch_task = asyncio.create_task(self._log_watcher())
-                        await self._patch_fx(FX_CAS)
-                        await self._set_effect(FX_CAS)
+        proc = None
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "/usr/bin/journalctl",
+                "--user",
+                "--follow",
+                "--lines=0",
+                "--output=cat",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
+                env=env,
+            )
+
+            decky.logger.info(
+                f"[MuraDeck] External monitor journal started "
+                f"(PID: {proc.pid})"
+            )
+
+            assert proc.stdout is not None
+
+            while True:
+                line = await proc.stdout.readline()
+
+                if not line:
+                    code = await proc.wait()
+                    decky.logger.error(
+                        f"[MuraDeck] Monitor journal stopped "
+                        f"(exit code: {code})"
+                    )
+                    break
+
+                text = line.decode("utf-8", "ignore").strip()
+
+                display_match = re_display.search(text)
+                if display_match:
+                    connector, display_name = display_match.groups()
+                    decky.logger.info(
+                        f"[Monitor] Display detected: "
+                        f"{connector} -> {display_name}"
+                    )
+
+                match = re_connector.search(text)
+                if not match:
+                    continue
+
+                connector = match.group(1)
+                external = connector.lower() != "edp-1"
+
+                if external == self._is_external_display:
+                    continue
+
+                state = "1" if external else "0"
+                decky.logger.info(
+                    f"[Monitor] Connector selected: {connector}; "
+                    f"External = {state}"
+                )
+
+                try:
+                    await self.on_focus_change()
+                    self._is_external_display = external
+                    await emit("monitor_changed", external)
+
+                    if external:
+                        appid = await self.get_focused_appid()
+                        if appid:
+                            self._current_cas = await self.get_cas(appid)
+                            self._current_sharpness = await self.get_sharpness(appid)
+                            decky.logger.info(
+                                f"[Monitor] [External] Refreshed "
+                                f"CAS={self._current_cas}, "
+                                f"Sharp={self._current_sharpness}"
+                            )
+
+                        if self._monitor_watch_enabled:
+                            decky.logger.info(
+                                "[Monitor] External + Watch ON "
+                                "-> CAS-only mode"
+                            )
+                            self._use_cas_only = True
+                            if self._watch_task is None or self._watch_task.done():
+                                self._watch_task = asyncio.create_task(
+                                    self._profile_watcher()
+                                )
+                            await self._patch_fx(FX_CAS)
+                            await self._set_effect(FX_CAS)
+                        else:
+                            decky.logger.info(
+                                "[Monitor] External + Watch OFF "
+                                "-> normal MuraDeck"
+                            )
+                            self._use_cas_only = False
+                            await self.toggle_enabled(True)
                     else:
-                        decky.logger.info("[Monitor] External + Watch OFF → normal MuraDeck")
                         self._use_cas_only = False
-                        await self.toggle_enabled(True)
-                elif state == "0":
-                    self._is_external_display = False
-                    await emit("monitor_changed", True)
-                    self._use_cas_only = False
+                        appid = await self.get_focused_appid()
+                        if appid:
+                            self._current_cas = await self.get_cas(appid)
+                            self._current_sharpness = await self.get_sharpness(appid)
+                            decky.logger.info(
+                                f"[Monitor] [Internal] Refreshed "
+                                f"CAS={self._current_cas}, "
+                                f"Sharp={self._current_sharpness}"
+                            )
 
-                    # Re-evaluate CAS and sharpness after monitor switch
-                    appid = await self.get_focused_appid()
-                    if appid:
-                        self._current_cas = await self.get_cas(appid)
-                        self._current_sharpness = await self.get_sharpness(appid)
-                        decky.logger.info(f"[Monitor] [Internal] Refreshed CAS={self._current_cas}, Sharp={self._current_sharpness}")
+                        if self._monitor_watch_enabled:
+                            decky.logger.info(
+                                "[Monitor] External disconnected "
+                                "-> restoring MuraDeck"
+                            )
+                            if self._watch_task is None or self._watch_task.done():
+                                self._watch_task = asyncio.create_task(
+                                    self._profile_watcher()
+                                )
+                            await self._apply_current_profile()
+                            await self._patch_fx(self.current_effect)
+                            await self._set_effect(self.current_effect)
+                        else:
+                            await self.toggle_enabled(True)
 
-                    if self._monitor_watch_enabled:
-                        decky.logger.info("[Monitor] External disconnected → restoring MuraDeck")
-                        if self._watch_task is None or self._watch_task.done():
-                            self._watch_task = asyncio.create_task(self._log_watcher())
-                        await self._apply_current_profile()
-                        await self._patch_fx(self.current_effect)
-                        await self._set_effect(self.current_effect)
-                    else:
-                        await self.toggle_enabled(True)
+                    decky.logger.info(
+                        f"[Monitor] Successfully applied monitor state: "
+                        f"{'External' if external else 'Internal'}"
+                    )
+                except Exception:
+                    decky.logger.exception(
+                        f"[Monitor] Failed to apply monitor state "
+                        f"for connector {connector}"
+                    )
 
+        except asyncio.CancelledError:
+            decky.logger.info(
+                "[MuraDeck] External monitor watcher cancelled"
+            )
+            raise
+        except Exception:
+            decky.logger.exception(
+                "[MuraDeck] External monitor watcher failed"
+            )
+        finally:
+            if proc is not None and proc.returncode is None:
+                proc.terminate()
+                await proc.wait()
 
     async def is_external_display(self) -> bool:
         return self._is_external_display
@@ -509,12 +661,8 @@ class Plugin:
 
     async def _set_profile(self, profile: str):
         self.profile = profile
-        if profile == "HDR10PQ":
-            self.current_effect = FX_HDR10PQ
-            self._grain_enabled = self._grain_enabled_hdr
-            self._lgg_enabled = self._lgg_enabled_hdr
-        elif profile == "HDRscRGB":
-            self.current_effect = FX_HDRscRGB
+        if profile in ("HDR10PQ", "HDRscRGB"):
+            self.current_effect = FX_HDR10PQ if profile == "HDR10PQ" else FX_HDRscRGB
             self._grain_enabled = self._grain_enabled_hdr
             self._lgg_enabled = self._lgg_enabled_hdr
         else:
@@ -585,7 +733,6 @@ class Plugin:
     async def get_lgg(self) -> bool:
         return self._lgg_enabled
     
-    # Global Sharpness
     async def set_global_sharpness(self, value: float):
         key = (
             "sharpness_global_external"
@@ -603,7 +750,6 @@ class Plugin:
         )
         return settings.getSetting(key, 0.0)
 
-    # Per-App Sharpness
     async def set_app_sharpness(self, appid: int, value: float):
         key = (
             f"sharpness_app_{appid}_external"
@@ -621,7 +767,6 @@ class Plugin:
         )
         return settings.getSetting(key, None)
     
-    # Per-App Enabled
     async def set_per_app_enabled(self, appid: int, enabled: bool):
         settings.setSetting(f"sharpness_perapp_enabled_{appid}", enabled)
         settings.commit()
@@ -629,7 +774,6 @@ class Plugin:
     async def get_per_app_enabled(self, appid: int) -> bool:
         return settings.getSetting(f"sharpness_perapp_enabled_{appid}", False)
     
-    # Global CAS toggle
     async def set_global_cas(self, value: bool):
         key = (
             "cas_enabled_global_external"
@@ -647,7 +791,6 @@ class Plugin:
         )
         return settings.getSetting(key, False)
     
-    # Per-App CAS toggle
     async def set_app_cas(self, appid: int, value: bool):
         key = (
             f"cas_enabled_app_{appid}_external"
@@ -672,7 +815,6 @@ class Plugin:
     async def get_cas_perapp_enabled(self, appid: int) -> bool:
         return settings.getSetting(f"cas_perapp_enabled_{appid}", False)
     
-    # CAS Activation
     async def set_cas(self, value: bool, appid: int | None, per_app: bool):
         if per_app and appid is not None:
             await self.set_app_cas(appid, value)
@@ -680,7 +822,6 @@ class Plugin:
             await self.set_global_cas(value)
 
         self._current_cas = value
-
         await self._patch_fx(self.current_effect)
         await self._set_effect(self.current_effect)
 
@@ -694,13 +835,10 @@ class Plugin:
     async def toggle_cas_perapp(self, appid: int, enable: bool):
         await self.set_cas_perapp_enabled(appid, enable)
         val = await self.get_cas(appid)
-
         self._current_cas = val
-
         await self._patch_fx(self.current_effect)
         await self._set_effect(self.current_effect)
     
-    # Sharpness
     async def set_sharpness(self, value: float, appid: int | None, per_app: bool):
         if per_app and appid is not None:
             await self.set_app_sharpness(appid, value)
@@ -720,9 +858,7 @@ class Plugin:
     
     async def toggle_sharpness_perapp(self, appid: int, enable: bool):
         await self.set_per_app_enabled(appid, enable)
-
         value = await self.get_sharpness(appid)
-
         self._current_sharpness = value
         await self._patch_fx(self.current_effect)
         await self._set_effect(self.current_effect)
@@ -773,7 +909,6 @@ class Plugin:
             line = lines[i]
             stripped = line.strip()
 
-            # CAS toggle
             if cas_enabled is not None and "uniform float CAS_Enabled" in stripped:
                 while i < len(lines) and ">" not in lines[i]:
                     i += 1
@@ -788,7 +923,6 @@ class Plugin:
                 ])
                 continue
 
-            # patch Sharpness
             if sharpness is not None and "uniform float Sharpness" in stripped:
                 while i < len(lines) and ">" not in lines[i]:
                     i += 1
@@ -803,7 +937,6 @@ class Plugin:
                 ])
                 continue
 
-            # patch MuraMapScale
             if map_scale is not None and "uniform float MuraMapScale" in stripped:
                 while i < len(lines) and ">" not in lines[i]:
                     i += 1
@@ -817,7 +950,6 @@ class Plugin:
                 ])
                 continue
 
-            # patch MuraFadeNearWhite
             if fade_near is not None and "uniform float MuraFadeNearWhite" in stripped:
                 while i < len(lines) and ">" not in lines[i]:
                     i += 1
@@ -831,7 +963,6 @@ class Plugin:
                 ])
                 continue
 
-            # patch grain intensity
             if "uniform float Intensity" in stripped:
                 while i < len(lines) and ">" not in lines[i]:
                     i += 1
@@ -845,7 +976,6 @@ class Plugin:
                 ])
                 continue
 
-            # patch RGB Lift/Gamma
             if "uniform float3 RGB_Lift" in stripped:
                 while i < len(lines) and ">" not in lines[i]:
                     i += 1
@@ -887,7 +1017,7 @@ class Plugin:
 
         decky.logger.info(
             f"[MuraDeck] FX patched: {fx_name} → Grain={grain_value}, "
-            f"LGG Lift/Gamma=({lgg_lift_value},{lgg_gamma_value})"
+            f"LGG Lift/Gamma=({lgg_lift_value},{lgg_gamma_value}) "
             f"CAS={cas_enabled}, Sharpness={sharpness}"
         )
 
@@ -994,7 +1124,6 @@ class Plugin:
         settings.commit()
         decky.logger.info("[MuraDeck] Reset welcome flag on uninstall")
 
-        # Remove shaders
         all_shaders = MURA_SHADER_FILES + [
             "MuraDeck_SDR_temp.fx",
             "MuraDeck_HDR10PQ_temp.fx",
@@ -1009,7 +1138,6 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Delete shader {fn} error: {e}")
 
-        # Remove textures
         for fn in MURA_TEXTURE_FILES:
             try:
                 os.remove(os.path.join(TEXTURE_DIR, fn))
@@ -1040,7 +1168,6 @@ class Plugin:
         os.makedirs(SHADER_DIR, exist_ok=True)
         os.makedirs(TEXTURE_DIR, exist_ok=True)
 
-        # Mura map extractor
         decky.logger.info("[MuraDeck] Installing shaders...")
         for cmd in ["galileo-mura-extractor", "galileo-mura-setup"]:
             try:
@@ -1061,7 +1188,6 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Run {cmd} error: {e}")
                     
-        # Copy from /tmp/mura
         try:
             green_tmp = glob.glob(os.path.join("/tmp/mura", "*green.png"))
             red_tmp = glob.glob(os.path.join("/tmp/mura", "*red.png"))
@@ -1074,7 +1200,6 @@ class Plugin:
         except Exception as e:
             decky.logger.error(f"[MuraDeck] Failed to copy from /tmp/mura: {e}")
 
-        # Copy from ~/.config/gamescope/mura/{id}
         try:
             mura_config_dir = os.path.expanduser("~/.config/gamescope/mura")
             candidate_dirs = glob.glob(os.path.join(mura_config_dir, "*"))
@@ -1096,7 +1221,6 @@ class Plugin:
         except Exception as e:
             decky.logger.error(f"[MuraDeck] Failed to fallback copy from ~/.config/gamescope/mura: {e}")
 
-        # Install all shaders
         for fn in MURA_SHADER_FILES:
             src = os.path.join(PLUGIN_SHADERS_DIR, fn)
             dst = os.path.join(SHADER_DIR, fn)
@@ -1107,7 +1231,6 @@ class Plugin:
             except Exception as e:
                 decky.logger.error(f"[MuraDeck] Install shader {fn} error: {e}")
 
-        # Welcome flag
         seen = settings.getSetting("has_seen_welcome", None)
         if seen is None:
             decky.logger.info("[MuraDeck] First-time: mark welcome")
